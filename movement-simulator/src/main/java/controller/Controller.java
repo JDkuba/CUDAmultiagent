@@ -4,7 +4,7 @@ import javafx.stage.Stage;
 import view.View;
 
 public class Controller {
-    private View view;
+    private interfaces.View view;
     public Controller(Stage primaryStage) {
         this.view = new View(primaryStage);
     }

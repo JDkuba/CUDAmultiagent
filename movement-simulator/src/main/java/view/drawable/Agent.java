@@ -1,4 +1,4 @@
-package drawable;
+package view.drawable;
 
 import javafx.scene.Group;
 import javafx.scene.shape.Circle;
