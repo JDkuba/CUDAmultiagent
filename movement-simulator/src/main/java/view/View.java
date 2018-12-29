@@ -4,8 +4,11 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import utility.Position;
 
-public class View {
+import java.util.List;
+
+public class View implements interfaces.View {
     private Stage primaryStage;
     private Pane root;
     public View(Stage primaryStage) {
@@ -21,5 +24,16 @@ public class View {
         this.root.setPrefHeight(Screen.getPrimary().getBounds().getHeight());
         this.primaryStage.setTitle("Movement-Simulator");
         this.primaryStage.setScene(new Scene(this.root));
+    }
+
+
+    @Override
+    public void addAgents(List<Position> positions) {
+
+    }
+
+    @Override
+    public void moveAgents(List<Position> positions) {
+
     }
 }
