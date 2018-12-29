@@ -1,5 +1,5 @@
 package view;
 
 class Config {
-    final double AGENT_SIZE = 20;
+    static final double AGENT_SIZE = 20;
 }

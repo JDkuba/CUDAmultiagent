@@ -1,19 +1,24 @@
 package view;
 
+import abstractClasses.AbstractPlane;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import utility.Position;
+import view.drawable.Agent;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class View implements interfaces.View {
     private Stage primaryStage;
     private Pane root;
+    private AbstractPlane plane;
     public View(Stage primaryStage) {
         this.primaryStage = primaryStage;
         initializePrimaryStage();
+        plane = new Plane();
         this.primaryStage.show();
     }
 
@@ -26,14 +31,8 @@ public class View implements interfaces.View {
         this.primaryStage.setScene(new Scene(this.root));
     }
 
-
     @Override
-    public void addAgents(List<Position> positions) {
-
-    }
-
-    @Override
-    public void moveAgents(List<Position> positions) {
-
+    public AbstractPlane getPlane() {
+        return plane;
     }
 }
