@@ -1,0 +1,1 @@
+void run(int n_agents, int board_x, int board_y);
