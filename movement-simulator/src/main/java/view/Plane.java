@@ -30,6 +30,7 @@ class Plane extends AbstractPlane {
     public void addAgents(List<Position> positions) {
         for (Position position : positions) {
             Agent agent = new Agent(position, Config.AGENT_SIZE);
+            agent.setColor(Config.STANDARD_AGENT_COLOR);
             agents.add(agent);
             this.getChildren().add(agent);
         }

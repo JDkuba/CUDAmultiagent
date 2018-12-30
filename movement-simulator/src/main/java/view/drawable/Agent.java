@@ -1,6 +1,7 @@
 package view.drawable;
 
 import javafx.scene.Group;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import utility.Position;
 
@@ -22,7 +23,13 @@ public class Agent extends Group {
         this.setTranslateY(translateY);
     }
 
+    public void setColor(Color color) {
+        agentShape.setFill(color);
+    }
+
     private void initializeAgentShape(double size) {
         agentShape = new Circle(size / 2);
     }
+
+
 }
