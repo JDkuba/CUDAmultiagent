@@ -52,6 +52,11 @@ public:
         ms = s;
     }
 
+    HD void set_vector(float vx, float vy) {
+        vect[0] = vx;
+        vect[1] = vy;
+    }
+
     HD void normalize() {
         if (vx() == 0 && vy() == 0) return;
         float len = sqrt(vx() * vx() + vy() * vy());
