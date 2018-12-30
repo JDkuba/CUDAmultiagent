@@ -1,7 +1,10 @@
 package view;
 
 import abstractClasses.AbstractPlane;
+import javafx.animation.ParallelTransition;
+import javafx.animation.TranslateTransition;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 import utility.Position;
 import view.drawable.Agent;
 
@@ -26,13 +29,22 @@ class Plane extends AbstractPlane {
     @Override
     public void addAgents(List<Position> positions) {
         for (Position position : positions) {
-            agents.add(new Agent(position, Config.AGENT_SIZE));
-            this.getChildren().add(agents.get(agents.size()-1));
+            Agent agent = new Agent(position, Config.AGENT_SIZE);
+            agents.add(agent);
+            this.getChildren().add(agent);
         }
     }
 
     @Override
     public void moveAgents(List<Position> positions) {
-
+        ParallelTransition parallelTransition = new ParallelTransition();
+        for (int i = 0; i < positions.size(); i++) {
+            TranslateTransition translateTransition = new TranslateTransition(
+                    Config.AGENT_TRANSITION_DURATION, agents.get(i));
+            translateTransition.setToX(positions.get(i).getX());
+            translateTransition.setToY(positions.get(i).getY());
+            parallelTransition.getChildren().add(translateTransition);
+        }
+        parallelTransition.playFromStart();
     }
 }
