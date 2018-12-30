@@ -18,8 +18,14 @@ public class View implements interfaces.View {
     public View(Stage primaryStage) {
         this.primaryStage = primaryStage;
         initializePrimaryStage();
-        plane = new Plane();
+        initializePlane();
         this.primaryStage.show();
+    }
+
+    private void initializePlane() {
+        plane = new Plane(Screen.getPrimary().getBounds().getWidth(),
+                Screen.getPrimary().getBounds().getHeight());
+        root.getChildren().add(plane);
     }
 
     private void initializePrimaryStage() {
