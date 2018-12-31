@@ -75,6 +75,8 @@ class Plane extends AbstractPlane {
         int totalNumberOfTranslations = 0;
         int agentMovementNumber = 1;
 
+        long startTime = System.nanoTime();
+        List<SequentialTransition> sequentialTransitions = new ArrayList<>();
         for (List<Position> agentMovement : agentMovements) {
             System.out.println("making animation number " +
                     agentMovementNumber + " out of " + (agentMovements.size()));
@@ -92,10 +94,13 @@ class Plane extends AbstractPlane {
             }
 
             sequentialTransition.getChildren().addAll(transitions);
-            parallelTransition.getChildren().add(sequentialTransition);
+            sequentialTransitions.add(sequentialTransition);
             agentMovementNumber++;
         }
+        parallelTransition.getChildren().addAll(sequentialTransitions);
+        Long endTime = System.nanoTime();
         System.out.println("Total number of translations: " + totalNumberOfTranslations);
+        System.out.println("Time spent on preparing translations: " + (long)((endTime-startTime) / 1e6) + "ms");
         return parallelTransition;
     }
 }
