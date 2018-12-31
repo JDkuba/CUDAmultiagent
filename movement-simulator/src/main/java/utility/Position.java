@@ -22,4 +22,13 @@ public class Position {
     public double getX() {
         return x;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Position) {
+            return ((Position) o).x == this.x && ((Position) o).y == this.y;
+        } else {
+            return super.equals(o);
+        }
+    }
 }

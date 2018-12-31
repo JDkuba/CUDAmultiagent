@@ -27,6 +27,10 @@ public class Agent extends Group {
         agentShape.setFill(color);
     }
 
+    public void setSize(double size) {
+        agentShape.setRadius(size/2);
+    }
+
     private void initializeAgentShape(double size) {
         agentShape = new Circle(size / 2);
     }
