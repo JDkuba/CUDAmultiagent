@@ -1,9 +1,8 @@
 package controller;
 
 import abstractClasses.AbstractPlane;
-import javafx.animation.Animation;
+import cudaUtils.CudaSceneDataBox;
 import javafx.animation.Transition;
-import javafx.scene.effect.Light;
 import javafx.stage.Stage;
 import utility.Position;
 import view.View;
@@ -17,7 +16,7 @@ public class Controller {
         this.view = new View(primaryStage);
     }
 
-    public void run() {
+    public void setAnimation() {
         AbstractPlane plane = view.getPlane();
         final double DISTANCE = 12;
         final double FIRST_DISTANCE_FROM_TOP = 12;
@@ -25,13 +24,13 @@ public class Controller {
         final double AGENT_SIZE = 10;
 
         plane.setAgentsSize(AGENT_SIZE);
-        List<Position> agents = new ArrayList<>();
+        List<Position> startPositions = new ArrayList<>();
         List<List<Position>> paths = new ArrayList<>();
         final double center = plane.getWidth() / 2;
         for (double distanceFromTop = FIRST_DISTANCE_FROM_TOP, loop = 0;
              loop <= NUMBER_OF_ROWS; distanceFromTop += DISTANCE, loop++) {
             for (double i = center; i + DISTANCE/2 < plane.getWidth(); i += DISTANCE) {
-                agents.add(new Position(i, distanceFromTop));
+                startPositions.add(new Position(i, distanceFromTop));
                 List<Position> moves = new ArrayList<>();
                 for (double j = i; j >= center - (i - center) - 1; j -= 2) {
                     moves.add(new Position(j, distanceFromTop +
@@ -42,8 +41,24 @@ public class Controller {
             }
         }
 
-        plane.addAgents(agents);
+        plane.addAgents(startPositions);
         Transition transition = plane.getPathTranslateAgents(paths);
+
+        setPlaneOnMouseClick(startPositions, plane, transition);
+    }
+
+    public void setAnimation(CudaSceneDataBox sceneDataBox){
+        AbstractPlane plane = view.getPlane();
+        final double AGENT_SIZE = 10;
+
+        plane.setAgentsSize(AGENT_SIZE);
+        plane.addAgents(sceneDataBox.getStartPositions());
+        Transition transition = plane.getPathTranslateAgents(sceneDataBox.getPaths());
+
+        setPlaneOnMouseClick(sceneDataBox.getStartPositions(), plane, transition);
+    }
+
+    private void setPlaneOnMouseClick(List<Position> agents, AbstractPlane plane, Transition transition) {
         plane.setOnMouseClicked(event -> {
             plane.setMouseTransparent(true);
             plane.setAgentsPositions(agents);
