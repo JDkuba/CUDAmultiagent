@@ -60,10 +60,9 @@ public class Controller {
 
     private void setPlaneOnMouseClick(List<Position> agents, AbstractPlane plane, Transition transition) {
         plane.setOnMouseClicked(event -> {
-            plane.setMouseTransparent(true);
+            transition.stop();
             plane.setAgentsPositions(agents);
-            transition.setOnFinished(event1 -> plane.setMouseTransparent(false));
-            transition.play();
+            transition.playFromStart();
         });
     }
 }
