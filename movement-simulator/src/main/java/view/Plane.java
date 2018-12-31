@@ -56,12 +56,11 @@ class Plane extends AbstractPlane {
         }
     }
 
-    @Override
     public void transitionTranslateAgents(List<Position> positions) {
         ParallelTransition parallelTransition = new ParallelTransition();
         for (int i = 0; i < positions.size(); i++) {
             TranslateTransition translateTransition = new TranslateTransition(
-                    Config.AGENT_TRANSITION_DURATION, agents.get(i));
+                    Config.AGENT_TRANSITION_FRAME_DURATION, agents.get(i));
             translateTransition.setToX(positions.get(i).getX());
             translateTransition.setToY(positions.get(i).getY());
             parallelTransition.getChildren().add(translateTransition);
@@ -72,31 +71,29 @@ class Plane extends AbstractPlane {
     @Override
     public Transition getPathTranslateAgents(List<List<Position>> agentMovements) {
         ParallelTransition parallelTransition = new ParallelTransition();
+
         int totalNumberOfTranslations = 0;
-        for (int i = 1; i < agentMovements.size(); i++) {
-            System.out.println("making animation number " + i + " out of " + (agentMovements.size()-1));
+        int agentMovementNumber = 1;
+
+        for (List<Position> agentMovement : agentMovements) {
+            System.out.println("making animation number " +
+                    agentMovementNumber + " out of " + (agentMovements.size()));
             SequentialTransition sequentialTransition = new SequentialTransition();
-            for (Position position : agentMovements.get(i)) {
-                TranslateTransition translateTransition = new TranslateTransition(Duration.millis(20), agents.get(i));
+            Agent agent = agents.get(agentMovementNumber-1);
+            ArrayList<TranslateTransition> transitions = new ArrayList<>();
+
+            for (Position position : agentMovement) {
+                TranslateTransition translateTransition = new TranslateTransition(
+                        Config.AGENT_TRANSITION_FRAME_DURATION, agent);
                 translateTransition.setToX(position.getX());
                 translateTransition.setToY(position.getY());
                 totalNumberOfTranslations++;
-                sequentialTransition.getChildren().add(translateTransition);
+                transitions.add(translateTransition);
             }
+
+            sequentialTransition.getChildren().addAll(transitions);
             parallelTransition.getChildren().add(sequentialTransition);
-            /*Path path = new Path();
-            Position prevPos = new Position(agents.get(i).getTranslateX(), agents.get(i).getTranslateY());
-            path.getElements().add(new MoveTo(prevPos.getX(), prevPos.getY()));
-            for (Position position : agentMovements.get(i)) {
-                if (prevPos.equals(position)) {
-                    path.getElements().add(new MoveTo(position.getX(), position.getY()));
-                } else {
-                    path.getElements().add(new LineTo(position.getX(), position.getY()));
-                }
-            }
-            PathTransition pathTransition = new PathTransition(
-                    Duration.millis(20 * agentMovements.get(i).size()), path, agents.get(i));
-            parallelTransition.getChildren().add(pathTransition);*/
+            agentMovementNumber++;
         }
         System.out.println("Total number of translations: " + totalNumberOfTranslations);
         return parallelTransition;
