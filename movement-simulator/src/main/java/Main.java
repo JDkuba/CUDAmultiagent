@@ -2,6 +2,8 @@ import controller.Controller;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
+import java.io.IOException;
+
 import static cudaUtils.CudaSceneDataImporter.getCudaSceneData;
 
 public class Main extends Application {
@@ -11,8 +13,12 @@ public class Main extends Application {
     }
 
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage primaryStage){
         Controller controller = new Controller(primaryStage);
-        controller.setAnimation(getCudaSceneData());
+        try {
+            controller.setAnimation(getCudaSceneData());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

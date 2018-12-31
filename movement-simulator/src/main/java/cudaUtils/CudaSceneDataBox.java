@@ -1,7 +1,9 @@
 package cudaUtils;
 
+import javafx.geometry.Pos;
 import utility.Position;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CudaSceneDataBox {
@@ -17,7 +19,10 @@ public class CudaSceneDataBox {
     }
 
     public List<Position> getStartPositions() {
-        return paths.get(0);
+        List<Position> startPositions = new ArrayList<>();
+        for (List<Position> agentPath : paths)
+            startPositions.add(agentPath.get(0));
+        return startPositions;
     }
 
     public void setPaths(List<List<Position>> paths) {
