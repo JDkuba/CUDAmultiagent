@@ -14,6 +14,7 @@
 # Generated files
 .idea/**/contentModel.xml
 data
+/movement-simulator/target/
 
 # Sensitive or high-churn files
 .idea/**/dataSources/
@@ -48,7 +49,8 @@ CMakeLists.txt
 *.iws
 
 # IntelliJ
-out/
+out/*.html
+out/*.jnlp
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/
