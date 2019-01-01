@@ -3,6 +3,6 @@
 #include <stdio.h>
 
 int main() {
-    run(20, 100, 100);
+    run(100, 1000, 1000);
     return 0;
 }

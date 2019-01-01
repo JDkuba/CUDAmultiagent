@@ -13,7 +13,6 @@ class agent {
 public:
     float cords[2];
     float vect[2];      //vector should be normed, so after every change of vector, we have to call normalize() method
-    float ms;
     HD inline float &x() { return cords[0]; }
 
     HD inline float &y() { return cords[1]; }
@@ -21,8 +20,6 @@ public:
     HD inline float &vx() { return vect[0]; }
 
     HD inline float &vy() { return vect[1]; }
-
-    HD inline float &max_speed() { return ms; }
 
     HD inline float x() const { return cords[0]; }
 
@@ -32,24 +29,20 @@ public:
 
     HD inline float vy() const { return vect[1]; }
 
-    HD inline float max_speed() const { return ms; }
-
     HD agent() {}
 
-    HD agent(float x, float y, float vx, float vy, float s) {
+    HD agent(float x, float y, float vx, float vy) {
         cords[0] = x;
         cords[1] = y;
         vect[0] = vx;
         vect[1] = vy;
-        ms = s;
     }
 
-    HD void set_agent(float x, float y, float vx, float vy, float s) {
+    HD void set_agent(float x, float y, float vx, float vy) {
         cords[0] = x;
         cords[1] = y;
         vect[0] = vx;
         vect[1] = vy;
-        ms = s;
     }
 
     HD void set_vector(float vx, float vy) {
@@ -65,18 +58,10 @@ public:
     }
 
 /**
- * moves agent with max_speed along vector vect
- **/
-    HD void move() {
-        x() += vy() * max_speed();
-        y() += vy() * max_speed();
-    }
-
-/**
  * moves agent with given speed s along vector vect
  **/
     HD void move(float s) {
-        x() += vy() * s;
+        x() += vx() * s;
         y() += vy() * s;
     }
 };

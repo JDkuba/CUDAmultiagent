@@ -14,55 +14,59 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-float rand_float(int b) {
-    return ((float) rand()) / (float) RAND_MAX * b;
+float rand_float(float min, float max) {
+    if (max == min) return max;
+    if (max < min) return ((((float) rand()) / (float) RAND_MAX) * (min - max)) + max;
+    return ((((float) rand()) / (float) RAND_MAX) * (max - min)) + min;
 }
 
 __device__ int distance(float x1, float y1, float x2, float y2) {
     return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
-
-__global__ void move(agent *agents, agent *agents_out, int n_agents, int board_x, int board_y, int agent_radius) {
+__global__ void set(agent *agents, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
-    if (ix < n_agents) {
-        agents_out[ix] = agents[ix];
-    }
-    if (ix > n_agents * n_agents) return;
+    if (ix >= n_agents * n_agents) return;
     //first, second to indeksy ktore bedzie sprawdzal dany watek
     int first = ix / n_agents;
     int second = ix % n_agents;
-    agent first_agent_in = agents[first];
-    agent second_agent_in = agents[second];
-    agent first_agent_out = agents[first];
-    agent second_agent_out = agents[second];
-    if (first != second) {
-        if (distance(first_agent_in.x() + first_agent_in.vx() * first_agent_in.max_speed(),
-                     first_agent_in.y() + first_agent_in.vy() * first_agent_in.max_speed(),
-                     second_agent_in.x() + second_agent_in.vx() * second_agent_in.max_speed(),
-                     second_agent_in.y() + second_agent_in.vy() * second_agent_in.max_speed()) < agent_radius) {
-            first_agent_out.set_vector(-first_agent_in.vx(), -first_agent_in.vy());
-            second_agent_out.set_vector(-second_agent_in.vx(), -second_agent_in.vy());
+    agent *first_agent = &agents[first];
+    agent *second_agent = &agents[second];
+    if (first < second) {
+        if (distance(first_agent->x() + first_agent->vx() * max_speed,
+                     first_agent->y() + first_agent->vy() * max_speed,
+                     second_agent->x() + second_agent->vx() * max_speed,
+                     second_agent->y() + second_agent->vy() * max_speed) < agent_radius) {
+            first_agent->set_vector(-first_agent->vx(), -first_agent->vy());
+            second_agent->set_vector(-second_agent->vx(), -second_agent->vy());
         }
     }
+}
+
+
+__global__ void move(agent *agents, int n_agents, int board_x, int board_y, float max_speed) {
+    int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
-        agent james = agents_out[ix];
-        float next_x = james.x() + james.vx() * james.max_speed();
-        float next_y = james.y() + james.vy() * james.max_speed();
-        if (next_x < board_x && next_x > 0 && next_y > 0 && next_y < board_y) agents_out[ix].move();
+        agent *james = &agents[ix];
+        float next_x = james->x() + james->vx() * max_speed;
+        float next_y = james->y() + james->vy() * max_speed;
+        if (next_x > board_x || next_x < 0) james->vx() = -james->vx();
+        if (next_y > board_y || next_y < 0) james->vy() = -james->vy();
+        agents[ix].move(max_speed);
     }
 }
 
 void run(int n_agents, int board_x, int board_y) {
-    int n_generations = 10000;
-    float agent_radius = 0.02;
+    int n_generations = 1000;
+    float agent_radius = 10;
+    float max_speed = 1;
 
     putMetadataToFile(n_agents, agent_radius, board_x, board_y);
 
     agent *agents = new agent[n_agents];
     srand(time(NULL));
     for (int i = 0; i < n_agents; ++i) {
-        agents[i].set_agent(rand_float(board_x), rand_float(board_y), rand_float(1), rand_float(1), 0.1);
+        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(-1, 1), rand_float(-1, 1));
         agents[i].normalize();
     }
 
@@ -72,21 +76,19 @@ void run(int n_agents, int board_x, int board_y) {
     int grid_size = (n_agents * n_agents) / block_size + 1;     //number of pairs
 
     agent *d_agents;
-    agent *d_agents_out;
 
     gpuErrchk(cudaMalloc(&d_agents, n_agents * sizeof(agent)));
-    gpuErrchk(cudaMalloc(&d_agents_out, n_agents * sizeof(agent)));
     gpuErrchk(cudaMemcpy(d_agents, agents, n_agents * sizeof(agent), cudaMemcpyHostToDevice));
 
     for (int i = 0; i < n_generations; ++i) {
-        move<<<grid_size, block_size>>>(d_agents, d_agents_out, n_agents, board_x, board_y, agent_radius);
-        gpuErrchk(cudaMemcpy(d_agents, d_agents_out, n_agents * sizeof(agent), cudaMemcpyDeviceToDevice));
-        gpuErrchk(cudaMemcpy(agents, d_agents_out, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
+        set<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, agent_radius, max_speed);
+        cudaDeviceSynchronize();
+        move<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, max_speed);
+        gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
 
         printAgentsPositions(agents, n_agents);
     }
-    gpuErrchk(cudaMemcpy(agents, d_agents_out, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
 
     cudaFree(d_agents);
-    cudaFree(d_agents_out);
 }
