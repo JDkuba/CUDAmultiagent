@@ -1,9 +1,16 @@
 #include "agent.h"
 #include "engine.h"
 #include <stdio.h>
+#include <iostream>
 
-int main() {
-    // run(agenst, generations, agent_radius, boardx, boardy)
-    run(200, 10000, 10, 1000, 1000);
+using namespace std;
+
+int main(int argc, char const *argv[])
+{
+    int agents, generations, boardx, boardy;
+    float agent_radius;
+    cin >> agents >> generations >> agent_radius >> boardx >> boardy;
+    // run(agents, generations, agent_radius, boardx, boardy)
+    run(agents, generations, agent_radius, boardx, boardy);
     return 0;
 }
