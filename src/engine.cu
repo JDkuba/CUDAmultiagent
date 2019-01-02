@@ -46,8 +46,11 @@ __global__ void set(agent *agents, int n_agents, int board_x, int board_y, int a
                      first_agent->y() + first_agent->vy() * max_speed,
                      second_agent->x() + second_agent->vx() * max_speed,
                      second_agent->y() + second_agent->vy() * max_speed) < agent_radius) {
-            first_agent->set_vector(-first_agent->vx(), -first_agent->vy());
-            second_agent->set_vector(-second_agent->vx(), -second_agent->vy());
+            //todo, agents should pass each other. Now, one agent (with smaller id) waits, an second is passing
+            //something like that http://gamma.cs.unc.edu/RVO/icra2008.pdf
+            first_agent->set_vector(0, 0);
+            second_agent->set_vector(-second_agent->vx(), second_agent->vy());
+//            second_agent->normalize();
         }
     }
 }
