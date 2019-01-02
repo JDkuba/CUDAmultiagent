@@ -90,6 +90,8 @@ clean:
 
 simpleTest: all
 	./bin/programd < simpleTest.in
+	tar -jcvf data.tar.bz2 *.out 
+	rm *.out
 
 -include $(DEPS) $(CUDEPS)
 

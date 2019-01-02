@@ -31,7 +31,6 @@ void openFiles(){
 
 void writeAgenstStartPosition(agent* agents, int n_agents){
     meta_file.write(reinterpret_cast<const char *>(&n_agents), sizeof(n_agents));
-    cout << sizeof(int) << '\n';
     writeAgentsPositions(agents, n_agents);    
 }
 
