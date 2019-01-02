@@ -56,9 +56,7 @@ __global__ void move(agent *agents, int n_agents, int board_x, int board_y, floa
     }
 }
 
-void run(int n_agents, int board_x, int board_y) {
-    int n_generations = 1000;
-    float agent_radius = 10;
+void run(int n_agents, int n_generations, float agent_radius, int board_x, int board_y) {
     float max_speed = 1;
 
     putMetadataToFile(n_agents, agent_radius, board_x, board_y);

@@ -1,1 +1,1 @@
-void run(int n_agents, int board_x, int board_y);
+void run(int n_agents, int n_generations, float agent_radius, int board_x, int board_y);
