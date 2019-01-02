@@ -89,7 +89,7 @@ clean:
 .SECONDARY: $(OBJS_DEBUG) $(OBJS_RELEASE) $(CUOBJS_DEBUG) $(CUOBJS_RELEASE) $(DEPS_DEBUG) $(DEPS_RELEASE) $(CUDEPS_DEBUG) $(CUDEPS_RELEASE)
 
 simpleTest: all
-	./bin/programd < simpleTest.in > agents_positions.out
+	./bin/programd < simpleTest.in
 
 -include $(DEPS) $(CUDEPS)
 

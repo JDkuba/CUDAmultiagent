@@ -21,11 +21,8 @@ public class Main extends Application {
         try {
             CudaSceneDataBox dataBox = new CudaSceneDataBox();
             int gens = dataBox.getCudaSceneMetadata().getGenerationsNumber();
-            List<List<Position>> list = new ArrayList<>();
             for (int i = 0; i < dataBox.getCudaSceneMetadata().getGenerationsNumber(); i++)
-                list.add(dataBox.getNextPositionsList());
-            System.out.println(list);
-            System.out.println(list.size());
+                System.out.println(dataBox.getNextPositionsList());
             System.out.println(gens);
 //            controller.setAnimation(getCudaSceneData());
         } catch (IOException e) {

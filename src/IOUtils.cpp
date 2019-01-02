@@ -30,7 +30,8 @@ void openFiles(){
 }
 
 void writeAgenstStartPosition(agent* agents, int n_agents){
-    meta_file.write(reinterpret_cast<const char *>(&n_agents), sizeof(int));
+    meta_file.write(reinterpret_cast<const char *>(&n_agents), sizeof(n_agents));
+    cout << sizeof(int) << '\n';
     writeAgentsPositions(agents, n_agents);    
 }
 
@@ -39,8 +40,8 @@ void writeAgentsPositions(agent* agents, int n_agents){
     {
         int x = round(agents[i].x());
         int y = round(agents[i].y());
-        meta_file.write(reinterpret_cast<const char *>(&x), sizeof(int));
-        meta_file.write(reinterpret_cast<const char *>(&y), sizeof(int));
+        meta_file.write(reinterpret_cast<const char *>(&x), sizeof(x));
+        meta_file.write(reinterpret_cast<const char *>(&y), sizeof(y));
     }
 }
 

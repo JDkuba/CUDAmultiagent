@@ -4,6 +4,8 @@ import javafx.geometry.Pos;
 import utility.Position;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -45,7 +47,8 @@ class CudaSceneDataImporter {
             openPositionsResources();
             byte[] bytes = new byte[DSIZE];
             positionsStream.read(bytes);
-            agentsNumber = (int) bytes[0];
+            agentsNumber = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt();
+            System.out.println(agentsNumber);
         }
         byte[] bytes = new byte[2*DSIZE*agentsNumber];
         if(positionsStream.read(bytes) == -1){
@@ -53,8 +56,11 @@ class CudaSceneDataImporter {
             return null;
         }
         List<Position> positions = new ArrayList<>();
-        for (int i = 0; i < 2*DSIZE*agentsNumber; i+=2*DSIZE)
-            positions.add(new Position((int) bytes[i], (int) bytes[i+DSIZE]));
+        for (int i = 0; i < 2*DSIZE*agentsNumber; i+=2*DSIZE){
+            int x = ByteBuffer.wrap(bytes, i, DSIZE).order(ByteOrder.LITTLE_ENDIAN).getInt();
+            int y = ByteBuffer.wrap(bytes, i+DSIZE, DSIZE).order(ByteOrder.LITTLE_ENDIAN).getInt();
+            positions.add(new Position(x, y));
+        }
         return positions;
     }
 }
