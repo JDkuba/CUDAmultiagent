@@ -53,16 +53,14 @@ __global__ void set(agent *agents, int n_agents, int board_x, int board_y, int a
 }
 
 
-__global__ void move(agent *agents, int n_agents, int board_x, int board_y, float max_speed) {
+__global__ void move(agent *agents, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
-        //jesli blisko to sie nie ruszaja
+        //jesli blisko to niech sie nie ruszaja
         agent *james = &agents[ix];
-        float next_x = james->x() + james->vx() * max_speed;
-        float next_y = james->y() + james->vy() * max_speed;
-        if (next_x > board_x || next_x < 0) james->vx() = -james->vx();
-        if (next_y > board_y || next_y < 0) james->vy() = -james->vy();
-        agents[ix].move(max_speed);
+        if (!distance(james->x(), james->y(), james->d_x(), james->d_y()) < agent_radius) {
+            agents[ix].move(max_speed);
+        }
     }
 }
 
@@ -95,7 +93,7 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
         cudaDeviceSynchronize();
         set<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, agent_radius, max_speed);
         cudaDeviceSynchronize();
-        move<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, max_speed);
+        move<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, agent_radius, max_speed);
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
 
         // printAgentsPositions(agents, n_agents);
