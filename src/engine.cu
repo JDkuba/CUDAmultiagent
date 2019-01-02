@@ -24,6 +24,15 @@ __device__ int distance(float x1, float y1, float x2, float y2) {
     return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
+__global__ void path(agent *agents, int n_agents, int board_x, int board_y, float max_speed) {  //A* maybe later
+    int ix = blockDim.x * blockIdx.x + threadIdx.x;
+    if (ix < n_agents) {
+        agent *james = &agents[ix];
+        james->set_vector(james->d_x()-james->x(), james->d_y()-james->y());
+        james->normalize();
+    }
+}
+
 __global__ void set(agent *agents, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix >= n_agents * n_agents) return;
@@ -47,6 +56,7 @@ __global__ void set(agent *agents, int n_agents, int board_x, int board_y, int a
 __global__ void move(agent *agents, int n_agents, int board_x, int board_y, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
+        //jesli blisko to sie nie ruszaja
         agent *james = &agents[ix];
         float next_x = james->x() + james->vx() * max_speed;
         float next_y = james->y() + james->vy() * max_speed;
@@ -65,7 +75,7 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
     agent *agents = new agent[n_agents];
     srand(time(NULL));
     for (int i = 0; i < n_agents; ++i) {
-        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(-1, 1), rand_float(-1, 1));
+        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x), rand_float(0, board_y));
         agents[i].normalize();
     }
 
@@ -81,6 +91,8 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
     gpuErrchk(cudaMemcpy(d_agents, agents, n_agents * sizeof(agent), cudaMemcpyHostToDevice));
 
     for (int i = 0; i < n_generations; ++i) {
+        path<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, max_speed);
+        cudaDeviceSynchronize();
         set<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, agent_radius, max_speed);
         cudaDeviceSynchronize();
         move<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, max_speed);
