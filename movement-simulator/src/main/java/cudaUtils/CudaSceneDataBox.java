@@ -3,33 +3,24 @@ package cudaUtils;
 import javafx.geometry.Pos;
 import utility.Position;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CudaSceneDataBox {
     private CudaSceneMetadata cudaSceneMetadata;
-    private List<List<Position>> paths;
+    private CudaSceneDataImporter importer;
 
-    public void setCudaSceneMetadata(CudaSceneMetadata cudaSceneMetadata) {
-        this.cudaSceneMetadata = cudaSceneMetadata;
+    public CudaSceneDataBox() throws IOException {
+        this.importer = new CudaSceneDataImporter();
+        this.cudaSceneMetadata = importer.getCudaSceneMetadata();
     }
 
-    public CudaSceneMetadata getCudaSceneMetadata() {
+    public CudaSceneMetadata getCudaSceneMetadata() throws IOException {
         return cudaSceneMetadata;
     }
 
-    public List<Position> getStartPositions() {
-        List<Position> startPositions = new ArrayList<>();
-        for (List<Position> agentPath : paths)
-            startPositions.add(agentPath.get(0));
-        return startPositions;
-    }
-
-    public void setPaths(List<List<Position>> paths) {
-        this.paths = paths;
-    }
-
-    public List<List<Position>> getPaths() {
-        return paths;
+    public List<Position> getNextPositionsList() throws IOException {
+        return importer.getNextPositionsList();
     }
 }

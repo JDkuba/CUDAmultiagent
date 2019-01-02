@@ -59,7 +59,8 @@ __global__ void move(agent *agents, int n_agents, int board_x, int board_y, floa
 void run(int n_agents, int n_generations, float agent_radius, int board_x, int board_y) {
     float max_speed = 1;
 
-    putMetadataToFile(n_agents, agent_radius, board_x, board_y);
+    openFiles();
+    putMetadataToFile(n_agents, n_generations, agent_radius, board_x, board_y);
 
     agent *agents = new agent[n_agents];
     srand(time(NULL));
@@ -68,7 +69,8 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
         agents[i].normalize();
     }
 
-    printAgentsStartPositions(agents, n_agents);
+    // printAgentsStartPositions(agents, n_agents);
+    writeAgenstStartPosition(agents, n_agents);
 
     int block_size = 1024;
     int grid_size = (n_agents * n_agents) / block_size + 1;     //number of pairs
@@ -84,9 +86,11 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
         move<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, max_speed);
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
 
-        printAgentsPositions(agents, n_agents);
+        // printAgentsPositions(agents, n_agents);
+        writeAgentsPositions(agents, n_agents);
     }
-    gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
+    
+    closeFiles();
 
     cudaFree(d_agents);
 }

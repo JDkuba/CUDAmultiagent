@@ -2,6 +2,7 @@ package cudaUtils;
 
 public class CudaSceneMetadata {
     private int agentNumber;
+    private int generationsNumber;
     private double agentRadius;
     private int boardX;
     private int boardY;
@@ -40,5 +41,14 @@ public class CudaSceneMetadata {
 
     public int getBoardY() {
         return boardY;
+    }
+
+    public CudaSceneMetadata setGenerationsNumber(int generationsNumber) {
+        this.generationsNumber = generationsNumber;
+        return this;
+    }
+
+    public int getGenerationsNumber() {
+        return generationsNumber;
     }
 }

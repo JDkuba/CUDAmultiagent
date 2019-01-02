@@ -24,6 +24,11 @@ public class Position {
     }
 
     @Override
+    public String toString() {
+        return String.valueOf(x + ' ' + y);
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (o instanceof Position) {
             return ((Position) o).x == this.x && ((Position) o).y == this.y;

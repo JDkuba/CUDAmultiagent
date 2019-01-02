@@ -2,11 +2,13 @@ package controller;
 
 import abstractClasses.AbstractPlane;
 import cudaUtils.CudaSceneDataBox;
+import cudaUtils.CudaSceneMetadata;
 import javafx.animation.Transition;
 import javafx.stage.Stage;
 import utility.Position;
 import view.View;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,13 +51,14 @@ public class Controller {
 
     public void setAnimation(CudaSceneDataBox sceneDataBox){
         AbstractPlane plane = view.getPlane();
-        final double AGENT_SIZE = 10;
 
-        plane.setAgentsSize(AGENT_SIZE);
-        plane.addAgents(sceneDataBox.getStartPositions());
-        Transition transition = plane.getPathTranslateAgents(sceneDataBox.getPaths());
 
-        setPlaneOnMouseClick(sceneDataBox.getStartPositions(), plane, transition);
+
+//        plane.setAgentsSize(AGENT_SIZE);
+//        plane.addAgents(sceneDataBox.getStartPositions());
+//        Transition transition = plane.getPathTranslateAgents(sceneDataBox.getPaths());
+//
+//        setPlaneOnMouseClick(sceneDataBox.getStartPositions(), plane, transition);
     }
 
     private void setPlaneOnMouseClick(List<Position> agents, AbstractPlane plane, Transition transition) {

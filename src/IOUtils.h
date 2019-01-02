@@ -9,6 +9,14 @@ void printAgentsPositions(agent* agents, int n_agents);
 
 void printAgentsStartPositions(agent* agents, int n_agents);
 
-void putMetadataToFile(int n_agents, float agent_radius, int board_x, int board_y);
+void putMetadataToFile(int n_agents, int n_generations, float agent_radius, int board_x, int board_y);
+
+void openFiles();
+
+void writeAgenstStartPosition(agent* agents, int n_agents);
+
+void writeAgentsPositions(agent* agents, int n_agents);
+
+void closeFiles();
 
 #endif

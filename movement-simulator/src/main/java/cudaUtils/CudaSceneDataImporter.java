@@ -10,41 +10,51 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-public class CudaSceneDataImporter {
+class CudaSceneDataImporter {
 
     static public final String METADATA_FILE_NAME = "data/metadata.out";
-    static public final String PATHS_FILE_PATH = "data/agents_positions.out";
+    static public final String AGENTS_POSTITION_FILE_PATH = "data/agents_positions.out";
+    static public final int DSIZE = 4;
 
-    static public CudaSceneMetadata getCudaSceneMetadata() throws IOException {
+    private Integer agentsNumber;
+    private InputStream positionsStream;
+    private File positionsFile;
+
+    public CudaSceneMetadata getCudaSceneMetadata() throws IOException {
         Path filePath = Paths.get(".").toAbsolutePath().getParent().getParent().resolve(METADATA_FILE_NAME);
         Scanner scanner = new Scanner(filePath);
         return new CudaSceneMetadata()
                         .setAgentNumber(scanner.nextInt())
+                        .setGenerationsNumber(scanner.nextInt())
                         .setAgentRadius(scanner.nextDouble())
                         .setBoardX(scanner.nextInt())
                         .setBoardY(scanner.nextInt());
     }
 
-    static public List<List<Position>> getAgentsPaths() throws IOException {
-
-        Path filePath = Paths.get(".").toAbsolutePath().getParent().getParent().resolve(PATHS_FILE_PATH);
-        Scanner scanner = new Scanner(filePath);
-        int agentsNumber = scanner.nextInt();
-        List<List<Position>> paths = new ArrayList<>();
-        for (int i = 0; i < agentsNumber; i++)
-            paths.add(new ArrayList<>());
-        while (scanner.hasNext()) {
-            for(List<Position> agentPath : paths)
-                agentPath.add(new Position(scanner.nextDouble(), scanner.nextDouble()));
-        }
-        scanner.close();
-        return paths;
+    private void openPositionsResources() throws FileNotFoundException {
+        positionsFile = Paths.get(".").toAbsolutePath().getParent().getParent().resolve(AGENTS_POSTITION_FILE_PATH).toFile();
+        positionsStream = new FileInputStream(positionsFile);
     }
 
-    static public CudaSceneDataBox getCudaSceneData() throws IOException {
-        CudaSceneDataBox sceneDataBox = new CudaSceneDataBox();
-        sceneDataBox.setPaths(getAgentsPaths());
-        sceneDataBox.setCudaSceneMetadata(getCudaSceneMetadata());
-        return sceneDataBox;
+    private void closePositionResources() throws IOException {
+        positionsStream.close();
+    }
+
+    public List<Position> getNextPositionsList() throws IOException{
+        if(agentsNumber == null){
+            openPositionsResources();
+            byte[] bytes = new byte[DSIZE];
+            positionsStream.read(bytes);
+            agentsNumber = (int) bytes[0];
+        }
+        byte[] bytes = new byte[2*DSIZE*agentsNumber];
+        if(positionsStream.read(bytes) == -1){
+            closePositionResources();
+            return null;
+        }
+        List<Position> positions = new ArrayList<>();
+        for (int i = 0; i < 2*DSIZE*agentsNumber; i+=2*DSIZE)
+            positions.add(new Position((int) bytes[i], (int) bytes[i+DSIZE]));
+        return positions;
     }
 }
