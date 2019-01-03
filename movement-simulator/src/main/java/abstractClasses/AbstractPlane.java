@@ -10,5 +10,8 @@ public abstract class AbstractPlane extends Pane {
     public abstract void addAgents(List<Position> positions);
     public abstract void setAgentsPositions(List<Position> positions);
     public abstract void setAgentsSize(double size);
-    public abstract Transition getPathTranslateAgents(List<List<Position>> agentMovements);
+    public abstract void addAgentsPathTranslation(List<List<Position>> agentMovements);
+    public abstract void stopAgentSimulation();
+    public abstract void playAgentSimulation();
+    public abstract void playAgentSimulationFromStart();
 }
