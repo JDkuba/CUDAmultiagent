@@ -19,12 +19,7 @@ public class Main extends Application {
     public void start(Stage primaryStage){
         Controller controller = new Controller(primaryStage);
         try {
-            CudaSceneDataBox dataBox = new CudaSceneDataBox();
-            int gens = dataBox.getCudaSceneMetadata().getGenerationsNumber();
-            for (int i = 0; i < dataBox.getCudaSceneMetadata().getGenerationsNumber(); i++)
-                System.out.println(dataBox.getNextPositionsList());
-            System.out.println(gens);
-//            controller.setAnimation(getCudaSceneData());
+            controller.setAnimation(new CudaSceneDataBox());
         } catch (IOException e) {
             e.printStackTrace();
         }

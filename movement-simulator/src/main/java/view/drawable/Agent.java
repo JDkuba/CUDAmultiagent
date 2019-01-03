@@ -7,17 +7,17 @@ import utility.Position;
 
 public class Agent extends Group {
     private Circle agentShape;
-    public Agent(Position position, double size) {
+    public Agent(Position position, double radius) {
         super();
-        initializeAgentShape(size);
+        initializeAgentShape(radius);
         this.getChildren().add(agentShape);
         this.setTranslateX(position.getX());
         this.setTranslateY(position.getY());
     }
 
-    public Agent(double translateX, double translateY, double size) {
+    public Agent(double translateX, double translateY, double radius) {
         super();
-        initializeAgentShape(size);
+        initializeAgentShape(radius);
         this.getChildren().add(agentShape);
         this.setTranslateX(translateX);
         this.setTranslateY(translateY);
@@ -27,13 +27,11 @@ public class Agent extends Group {
         agentShape.setFill(color);
     }
 
-    public void setSize(double size) {
-        agentShape.setRadius(size/2);
+    public void setRadius(double radius) {
+        agentShape.setRadius(radius);
     }
 
-    private void initializeAgentShape(double size) {
-        agentShape = new Circle(size / 2);
+    private void initializeAgentShape(double radius) {
+        agentShape = new Circle(radius);
     }
-
-
 }
