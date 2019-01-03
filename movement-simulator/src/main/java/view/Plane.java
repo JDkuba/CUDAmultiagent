@@ -2,26 +2,29 @@ package view;
 
 import abstractClasses.AbstractPlane;
 import javafx.animation.*;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.Path;
 import javafx.scene.shape.Rectangle;
-import javafx.util.Duration;
 import utility.Position;
 import view.drawable.Agent;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.IntStream;
 
 class Plane extends AbstractPlane {
     private List<Agent> agents;
     private Rectangle background;
     private double agentSize;
+    private List<List<List<Position>>> transitionList;
+    private Transition[] transitions;
+    private int currentTransitionNumber;
     Plane(double width, double height) {
         super();
         initializeBackground(width, height);
         this.agents = new ArrayList<>();
         this.agentSize = Config.AGENT_SIZE;
+        transitionList = new ArrayList<>();
+        transitions = new Transition[3];
     }
 
     private void initializeBackground(double width, double height) {
@@ -56,51 +59,78 @@ class Plane extends AbstractPlane {
         }
     }
 
-    public void transitionTranslateAgents(List<Position> positions) {
-        ParallelTransition parallelTransition = new ParallelTransition();
-        for (int i = 0; i < positions.size(); i++) {
-            TranslateTransition translateTransition = new TranslateTransition(
-                    Config.AGENT_TRANSITION_FRAME_DURATION, agents.get(i));
-            translateTransition.setToX(positions.get(i).getX());
-            translateTransition.setToY(positions.get(i).getY());
-            parallelTransition.getChildren().add(translateTransition);
+    @Override
+    public void addAgentsPathTranslation(List<List<Position>> agentMovements) {
+        transitionList.add(agentMovements);
+        if (transitionList.size() == transitions.length) {
+            initializeCurrentTransition();
         }
-        parallelTransition.playFromStart();
     }
 
     @Override
-    public Transition getPathTranslateAgents(List<List<Position>> agentMovements) {
+    public void stopAgentSimulation() {
+        transitions[0].stop();
+    }
+
+    @Override
+    public void playAgentSimulation() {
+        transitions[0].play();
+    }
+
+    @Override
+    public void playAgentSimulationFromStart() {
+        transitions[0].stop();
+        initializeCurrentTransition();
+        transitions[0].playFromStart();
+    }
+
+    private void initializeCurrentTransition() {
+        currentTransitionNumber = 1;
+        for (int i = 0; i < transitions.length; i++) {
+            transitions[i] = getPathTranslateAgents(transitionList.get(i));
+            setEventHandler(transitions[i]);
+        }
+    }
+
+    private void setEventHandler(Transition transition) {
+        transition.setOnFinished(event -> {
+            if (currentTransitionNumber < transitionList.size()) {
+                transitions[1].play();
+
+                System.arraycopy(transitions, 1, transitions, 0, transitions.length - 1);
+
+                currentTransitionNumber++;
+                if (currentTransitionNumber + transitions.length - 2 < transitionList.size()) {
+                    transitions[transitions.length - 1] = getPathTranslateAgents(transitionList.get(currentTransitionNumber + transitions.length - 2));
+                    setEventHandler(transitions[transitions.length - 1]);
+                }
+            }
+        });
+    }
+
+    private Transition getPathTranslateAgents(List<List<Position>> agentMovements) {
+
         ParallelTransition parallelTransition = new ParallelTransition();
 
-        int totalNumberOfTranslations = 0;
-        int agentMovementNumber = 1;
+        List<SequentialTransition> sequentialTransitions = Collections.synchronizedList(new ArrayList<>());
 
-        long startTime = System.nanoTime();
-        List<SequentialTransition> sequentialTransitions = new ArrayList<>();
-        for (List<Position> agentMovement : agentMovements) {
-            System.out.println("making animation number " +
-                    agentMovementNumber + " out of " + (agentMovements.size()));
+        IntStream.range(0, agentMovements.size()).parallel().forEach((index) -> {
             SequentialTransition sequentialTransition = new SequentialTransition();
-            Agent agent = agents.get(agentMovementNumber-1);
+            Agent agent = agents.get(index);
             ArrayList<TranslateTransition> transitions = new ArrayList<>();
 
-            for (Position position : agentMovement) {
+            for (Position position : agentMovements.get(index)) {
                 TranslateTransition translateTransition = new TranslateTransition(
                         Config.AGENT_TRANSITION_FRAME_DURATION, agent);
                 translateTransition.setToX(position.getX());
                 translateTransition.setToY(position.getY());
-                totalNumberOfTranslations++;
                 transitions.add(translateTransition);
             }
-
             sequentialTransition.getChildren().addAll(transitions);
             sequentialTransitions.add(sequentialTransition);
-            agentMovementNumber++;
-        }
+        });
+
         parallelTransition.getChildren().addAll(sequentialTransitions);
-        Long endTime = System.nanoTime();
-        System.out.println("Total number of translations: " + totalNumberOfTranslations);
-        System.out.println("Time spent on preparing translations: " + (long)((endTime-startTime) / 1e6) + "ms");
         return parallelTransition;
     }
 }
