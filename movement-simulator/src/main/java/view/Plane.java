@@ -60,8 +60,8 @@ class Plane extends AbstractPlane {
     }
 
     @Override
-    public void addAgentsPathTranslation(List<List<Position>> agentMovements) {
-        transitionList.add(agentMovements);
+    public void addAgentsPathTranslation(List<List<Position>> agentsPositions) {
+        transitionList.add(agentsPositions);
         if (transitionList.size() <= transitions.length) {
             initializeCurrentTransition();
         }
@@ -110,24 +110,24 @@ class Plane extends AbstractPlane {
         });
     }
 
-    private Transition getPathTranslateAgents(List<List<Position>> agentMovements) {
+    private Transition getPathTranslateAgents(List<List<Position>> agentsPositions) {
 
         ParallelTransition parallelTransition = new ParallelTransition();
 
         List<SequentialTransition> sequentialTransitions = Collections.synchronizedList(new ArrayList<>());
 
-        IntStream.range(0, agentMovements.size()).parallel().forEach((index) -> {
+        IntStream.range(0, agents.size()).parallel().forEach((agentNumber) -> {
             SequentialTransition sequentialTransition = new SequentialTransition();
-            Agent agent = agents.get(index);
+            Agent agent = agents.get(agentNumber);
             ArrayList<TranslateTransition> transitions = new ArrayList<>();
 
-            for (Position position : agentMovements.get(index)) {
+            IntStream.range(0, agentsPositions.size()).forEach(i -> {
                 TranslateTransition translateTransition = new TranslateTransition(
                         Config.AGENT_TRANSITION_FRAME_DURATION, agent);
-                translateTransition.setToX(position.getX());
-                translateTransition.setToY(position.getY());
+                translateTransition.setToX(agentsPositions.get(i).get(agentNumber).getX());
+                translateTransition.setToY(agentsPositions.get(i).get(agentNumber).getY());
                 transitions.add(translateTransition);
-            }
+            });
             sequentialTransition.getChildren().addAll(transitions);
             sequentialTransitions.add(sequentialTransition);
         });
