@@ -5,11 +5,6 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import utility.Position;
-import view.drawable.Agent;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class View implements interfaces.View {
     private Stage primaryStage;
@@ -40,5 +35,18 @@ public class View implements interfaces.View {
     @Override
     public AbstractPlane getPlane() {
         return plane;
+    }
+
+    @Override
+    public void setPlaneSize(double width, double height) {
+        plane.setBackgroundSize(width, height);
+        double wantedWidth = Screen.getPrimary().getBounds().getWidth() - 2 * Config.PLANE_MARGIN;
+        double wantedHeight = Screen.getPrimary().getBounds().getHeight() - 2 * Config.PLANE_MARGIN;
+        plane.setLayoutX(wantedWidth / 2 - width / 2 + Config.PLANE_MARGIN);
+        plane.setLayoutY(wantedHeight / 2 - height / 2 + Config.PLANE_MARGIN);
+        double scale = Double.min(wantedWidth / width,
+                wantedHeight / height);
+        plane.setScaleX(scale);
+        plane.setScaleY(scale);
     }
 }

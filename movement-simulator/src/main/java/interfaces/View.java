@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface View {
     AbstractPlane getPlane();
+    void setPlaneSize(double width, double height);
 }
