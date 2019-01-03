@@ -16,19 +16,23 @@ import java.util.stream.IntStream;
 class Plane extends AbstractPlane {
     private List<Agent> agents;
     private Rectangle background;
-    private double agentRadius;
-    private Duration frameDuration;
     private List<List<List<Position>>> transitionList;
     private Transition[] transitions;
     private int currentTransitionNumber;
+
+    private double agentRadius;
+    private Duration frameDuration;
+    private Color agentColor;
+
     Plane(double width, double height) {
         super();
         initializeBackground(width, height);
         this.agents = new ArrayList<>();
         this.agentRadius = Config.STANDARD_AGENT_RADIUS;
         this.frameDuration = Config.STANDARD_FRAME_DURATION;
-        transitionList = new ArrayList<>();
-        transitions = new Transition[3];
+        this.agentColor = Config.STANDARD_AGENT_COLOR;
+        this.transitionList = new ArrayList<>();
+        this.transitions = new Transition[3];
     }
 
     private void initializeBackground(double width, double height) {
@@ -41,7 +45,7 @@ class Plane extends AbstractPlane {
     public void addAgents(List<Position> positions) {
         for (Position position : positions) {
             Agent agent = new Agent(position, agentRadius);
-            agent.setColor(Config.STANDARD_AGENT_COLOR);
+            agent.setColor(agentColor);
             agents.add(agent);
             this.getChildren().add(agent);
         }
