@@ -1,17 +1,16 @@
 package controller;
 
 import abstractClasses.AbstractPlane;
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import cudaUtils.CudaSceneDataBox;
 import cudaUtils.CudaSceneMetadata;
-import javafx.animation.Transition;
+import javafx.scene.input.MouseButton;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import utility.Position;
 import view.View;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Controller {
@@ -24,11 +23,14 @@ public class Controller {
     public void setAnimation(CudaSceneDataBox dataBox) throws IOException {
         AbstractPlane plane = view.getPlane();
 
-        plane.addAgents(dataBox.getNextPositionsList());
+        List<Position> startingPositions = dataBox.getNextPositionsList();
+        plane.addAgents(startingPositions);
 
         CudaSceneMetadata metaData = dataBox.getCudaSceneMetadata();
-        plane.setAgentsSize(metaData.getAgentRadius());
 
+        view.setPlaneSize(metaData.getBoardX(), metaData.getBoardY());
+        plane.setAgentsRadius(metaData.getAgentRadius());
+        plane.setFrameDuration(Duration.millis(10));
 
         List<List<Position>> positionsLists = new ArrayList<>();
         for (int i = 2; i <= metaData.getGenerationsNumber(); i++) {
@@ -37,7 +39,19 @@ public class Controller {
         }
         addAnimationInPackages(20, positionsLists, plane);
 
-        plane.setOnMouseClicked(event -> plane.playAgentSimulationFromStart());
+        plane.setOnMouseClicked(event -> {
+            if (event.getButton().compareTo(MouseButton.SECONDARY) == 0) {
+                plane.stopAgentSimulation();
+            }
+            if (event.getButton().compareTo(MouseButton.PRIMARY) == 0) {
+                plane.playAgentSimulation();
+            }
+            if (event.getButton().compareTo(MouseButton.MIDDLE) == 0) {
+                plane.playAgentSimulationFromStart();
+                plane.stopAgentSimulation();
+                plane.setAgentsPositions(startingPositions);
+            }
+        });
     }
 
     private void addAnimationInPackages(int packageSize, List<List<Position>> positionsLists, AbstractPlane plane) {

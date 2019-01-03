@@ -2,7 +2,9 @@ package view;
 
 import abstractClasses.AbstractPlane;
 import javafx.animation.*;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 import utility.Position;
 import view.drawable.Agent;
 
@@ -14,30 +16,36 @@ import java.util.stream.IntStream;
 class Plane extends AbstractPlane {
     private List<Agent> agents;
     private Rectangle background;
-    private double agentSize;
     private List<List<List<Position>>> transitionList;
     private Transition[] transitions;
     private int currentTransitionNumber;
+
+    private double agentRadius;
+    private Duration frameDuration;
+    private Color agentColor;
+
     Plane(double width, double height) {
         super();
         initializeBackground(width, height);
         this.agents = new ArrayList<>();
-        this.agentSize = Config.AGENT_SIZE;
-        transitionList = new ArrayList<>();
-        transitions = new Transition[3];
+        this.agentRadius = Config.STANDARD_AGENT_RADIUS;
+        this.frameDuration = Config.STANDARD_FRAME_DURATION;
+        this.agentColor = Config.STANDARD_AGENT_COLOR;
+        this.transitionList = new ArrayList<>();
+        this.transitions = new Transition[3];
     }
 
     private void initializeBackground(double width, double height) {
         background = new Rectangle(width, height);
-        background.setFill(Config.PLANE_BACKGROUND_COLOR);
+        background.setFill(Config.STANDARD_PLANE_BACKGROUND_COLOR);
         this.getChildren().add(background);
     }
 
     @Override
     public void addAgents(List<Position> positions) {
         for (Position position : positions) {
-            Agent agent = new Agent(position, agentSize);
-            agent.setColor(Config.STANDARD_AGENT_COLOR);
+            Agent agent = new Agent(position, agentRadius);
+            agent.setColor(agentColor);
             agents.add(agent);
             this.getChildren().add(agent);
         }
@@ -52,11 +60,44 @@ class Plane extends AbstractPlane {
     }
 
     @Override
-    public void setAgentsSize(double size) {
-        agentSize = size;
+    public void setAgentsRadius(double radius) {
+        agentRadius = radius;
         for (Agent agent : agents) {
-            agent.setSize(size);
+            agent.setRadius(radius);
         }
+    }
+
+    @Override
+    public void setAgentsRadii(List<Double> radii) {
+        IntStream.range(0, radii.size()).forEach(i -> agents.get(i).setRadius(radii.get(i)));
+    }
+
+    @Override
+    public void setAgentsColor(Color color) {
+        for (Agent agent : agents) {
+            agent.setColor(color);
+        }
+    }
+
+    @Override
+    public void setAgentsColors(List<Color> colors) {
+        IntStream.range(0, colors.size()).forEach(i -> agents.get(i).setColor(colors.get(i)));
+    }
+
+    @Override
+    public void setBackgroundSize(double width, double height) {
+        background.setWidth(width);
+        background.setHeight(height);
+    }
+
+    @Override
+    public void setBackgroundColor(Color color) {
+        background.setFill(color);
+    }
+
+    @Override
+    public void setFrameDuration(Duration duration) {
+        this.frameDuration = duration;
     }
 
     @Override
@@ -121,9 +162,9 @@ class Plane extends AbstractPlane {
             Agent agent = agents.get(agentNumber);
             ArrayList<TranslateTransition> transitions = new ArrayList<>();
 
-            IntStream.range(0, agentsPositions.size()).forEach(i -> {
+            IntStream.range(0, agentsPositions.size()).forEach( i -> {
                 TranslateTransition translateTransition = new TranslateTransition(
-                        Config.AGENT_TRANSITION_FRAME_DURATION, agent);
+                        this.frameDuration, agent);
                 translateTransition.setToX(agentsPositions.get(i).get(agentNumber).getX());
                 translateTransition.setToY(agentsPositions.get(i).get(agentNumber).getY());
                 transitions.add(translateTransition);
