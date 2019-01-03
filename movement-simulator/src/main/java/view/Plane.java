@@ -62,7 +62,7 @@ class Plane extends AbstractPlane {
     @Override
     public void addAgentsPathTranslation(List<List<Position>> agentMovements) {
         transitionList.add(agentMovements);
-        if (transitionList.size() == transitions.length) {
+        if (transitionList.size() <= transitions.length) {
             initializeCurrentTransition();
         }
     }
@@ -87,8 +87,10 @@ class Plane extends AbstractPlane {
     private void initializeCurrentTransition() {
         currentTransitionNumber = 1;
         for (int i = 0; i < transitions.length; i++) {
-            transitions[i] = getPathTranslateAgents(transitionList.get(i));
-            setEventHandler(transitions[i]);
+            if (i < transitionList.size()) {
+                transitions[i] = getPathTranslateAgents(transitionList.get(i));
+                setEventHandler(transitions[i]);
+            }
         }
     }
 
