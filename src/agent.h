@@ -7,7 +7,7 @@
 #define HD
 #endif
 
-#include <cmath>
+#include <math.h>
 
 class vec2 {
 public:
@@ -27,36 +27,60 @@ public:
         y_v = y;
     }
 
-    HD static vec2 rep(float v) { return vec2(v,v); }
+    HD static vec2 rep(float v) { return {v,v}; }
 
     HD void set(float x, float y) {
         x_v = x;
         y_v = y;
     }
 
-    HD void normalize() {
-        if (x_v == 0 && y_v == 0) return;
-        float len = (float) sqrt(x_v * x_v + y_v * y_v);
-        x_v = x_v / len;
-        y_v = y_v / len;
+    HD float length() {
+        return sqrt(x_v * x_v + y_v * y_v);
+    }
+
+    HD vec2 normalized() {
+        float len = length();
+        if (len == 0) return rep(0);
+        return {x_v / len, y_v = y_v / len};
+    }
+
+    HD vec2 rotate(float theta) {
+        return {x_v * cos(theta) - y_v * sin(theta), x_v * sin(theta) + y_v * cos(theta)};
     }
 
     HD vec2 operator+(const vec2 &c) const {
-        return vec2(x() + c.x(), y() + c.y());
+        return {x() + c.x(), y() + c.y()};
     }
 
     HD vec2 operator-(const vec2 &c) const {
-        return vec2(x() - c.x(), y() - c.y());
+        return {x() - c.x(), y() - c.y()};
     }
 
     HD vec2 operator*(const vec2 &c) const {
-        return vec2(x() * c.x(), y() * c.y());
+        return {x() * c.x(), y() * c.y()};
+    }
+
+    HD vec2 operator/(const vec2 &c) const {
+        return {x() / c.x(), y() / c.y()};
     }
 };
 
 
-HD inline vec2 operator*(float scalar, const vec2& b) { return vec2::rep(scalar)*b; }
-HD inline vec2 operator*(const vec2& a, float scalar) { return a*vec2::rep(scalar); }
+HD inline vec2 operator*(float scalar, const vec2 &b) { return vec2::rep(scalar) * b; }
+
+HD inline vec2 operator*(const vec2 &a, float scalar) { return a * vec2::rep(scalar); }
+
+HD inline vec2 operator/(float scalar, const vec2 &b) { return vec2::rep(scalar) / b; }
+
+HD inline vec2 operator/(const vec2 &a, float scalar) { return a / vec2::rep(scalar); }
+
+HD inline vec2 operator+(float scalar, const vec2 &b) { return vec2::rep(scalar) + b; }
+
+HD inline vec2 operator+(const vec2 &a, float scalar) { return a + vec2::rep(scalar); }
+
+HD inline vec2 operator-(float scalar, const vec2 &b) { return vec2::rep(scalar) - b; }
+
+HD inline vec2 operator-(const vec2 &a, float scalar) { return a - vec2::rep(scalar); }
 
 class agent {
 public:
@@ -71,6 +95,9 @@ public:
 
     HD inline vec2 pos() const { return p; }
 
+    HD inline vec2 vect() const { return v; }
+
+    HD inline vec2 dest() const { return d; }
 
     HD agent() {}
 
@@ -90,7 +117,7 @@ public:
 
 
 /**
- * moves agent with given speed s along vector vect
+ * moves agent with given speed s along vector v
  **/
     HD void move(float s) {
         p = p + v * s;
