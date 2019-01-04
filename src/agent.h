@@ -27,7 +27,7 @@ public:
         y_v = y;
     }
 
-    HD static vec2 rep(float v) { return {v,v}; }
+    HD static vec2 rep(float v) { return {v, v}; }
 
     HD void set(float x, float y) {
         x_v = x;

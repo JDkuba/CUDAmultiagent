@@ -32,10 +32,10 @@ __device__ float distance(vec2 a, vec2 b) {
 }
 
 __device__ float det(vec2 a, vec2 b) {
-    return a.x()*b.y() - a.y()*b.x();
+    return a.x() * b.y() - a.y() * b.x();
 }
 
-__device__ vo compute_vo(agent* A, agent* B, int agent_radius, float max_speed) {
+__device__ vo compute_vo(agent *A, agent *B, int agent_radius, float max_speed) {
     vo obs;
     vec2 pAB = B->pos() - A->pos();
     vec2 pABn = pAB.normalized();
@@ -43,30 +43,23 @@ __device__ vo compute_vo(agent* A, agent* B, int agent_radius, float max_speed) 
 
     vec2 apex, left, right;
 
-    // no collision
-    if (pAB.length() > rAB){
-        apex = (A->vect() + B->vect()) / 2.0f;
-
+    if (pAB.length() > rAB) {
         float theta = asin(rAB / pAB.length());
-        right = pAB.rotate(-theta);
-        left = pAB.rotate(theta);
+        right = pABn.rotate(-theta);
+        left = pABn.rotate(theta);
 
         float sin2theta = 2.0f * sin(theta) * cos(theta);
         float s;
-        if (det(B->pos() - A->pos(), A->vect() - B->vect()) > 0.0f){
+        if (det(B->pos() - A->pos(), A->vect() - B->vect()) > 0.0f) {
             s = 0.5f * det(A->vect() + B->vect(), left) / sin2theta;
             apex = B->vect() + s * right;
-        }
-        else {
+        } else {
             s = 0.5f * det(A->vect() + B->vect(), right) / sin2theta;
             apex = B->vect() + s * left;
         }
-    }
-
-    // Collsion
-    else {
-        apex = 0.5f * (A->vect() + B->vect() - pAB.normalized() * (rAB - pAB.normalized()) / max_speed);
-        right = vec2(pAB.normalized().y(),-pAB.normalized().x());
+    } else {
+        apex = 0.5f * (A->vect() + B->vect() - pABn * (rAB - pAB.normalized()) / max_speed);
+        right = vec2(pABn.y(), -pABn.x());
         left = 0 - right;
     }
 
@@ -76,15 +69,15 @@ __device__ vo compute_vo(agent* A, agent* B, int agent_radius, float max_speed) 
     return obs;
 }
 
-__global__ void path(agent *agents, int n_agents, int board_x, int board_y, float max_speed) {  //A* maybe later
+__global__ void path(agent *agents, int n_agents) {  //A* maybe later
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
         agent *james = &agents[ix];
-        james->set_vector((james->dest()-james->pos()).normalized());
+        james->set_vector((james->dest() - james->pos()).normalized());
     }
 }
 
-__global__ void set(agent *agents, vo *obstacles, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
+__global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix >= n_agents * n_agents) return;
     //first, second to are indices of considered agents
@@ -101,11 +94,10 @@ __global__ void set(agent *agents, vo *obstacles, int n_agents, int board_x, int
 }
 
 
-__global__ void move(agent *agents, vo *obstacles, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
+__global__ void move(agent *agents, vo *obstacles, int n_agents, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
         //if agent is close to destination he should stay there
-        //todo check obstacles and choose best vector
         agent *james = &agents[ix];
         if (!distance(james->pos(), james->dest()) < agent_radius) {
             agents[ix].move(max_speed);
@@ -122,7 +114,8 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
     agent *agents = new agent[n_agents];
     srand(time(NULL));
     for (int i = 0; i < n_agents; ++i) {
-        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x), rand_float(0, board_y));
+        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x),
+                            rand_float(0, board_y));
         agents[i].vect() = agents[i].vect().normalized();
     }
 
@@ -140,17 +133,17 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
     gpuErrchk(cudaMemcpy(d_agents, agents, n_agents * sizeof(agent), cudaMemcpyHostToDevice));
 
     for (int i = 0; i < n_generations; ++i) {
-        path<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, max_speed);
+        path<<<grid_size, block_size>>>(d_agents, n_agents);
         cudaDeviceSynchronize();
-        set<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
+        set_vo<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, agent_radius, max_speed);
         cudaDeviceSynchronize();
-        move<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
+        move<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, agent_radius, max_speed);
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
 
         // printAgentsPositions(agents, n_agents);
         writeAgentsPositions(agents, n_agents);
     }
-    
+
     closeFiles();
 
     cudaFree(d_agents);
