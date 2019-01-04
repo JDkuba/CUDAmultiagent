@@ -33,7 +33,7 @@ __global__ void path(agent *agents, int n_agents, int board_x, int board_y, floa
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
         agent *james = &agents[ix];
-        james->set_vector(james->vect()-james->pos());
+        james->set_vector(james->dest()-james->pos());
         james->vect().normalize();
     }
 }
@@ -95,7 +95,7 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
     for (int i = 0; i < n_generations; ++i) {
         path<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, max_speed);
         cudaDeviceSynchronize();
-        set<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
+//        set<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
         cudaDeviceSynchronize();
         move<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
