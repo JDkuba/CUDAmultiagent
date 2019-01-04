@@ -9,69 +9,91 @@
 
 #include <cmath>
 
+class vec2 {
+public:
+    float x_v, y_v;
+    HD inline float &x() { return x_v; }
+
+    HD inline float &y() { return y_v; }
+
+    HD inline float x() const { return x_v; }
+
+    HD inline float y() const { return y_v; }
+
+    HD vec2() {}
+
+    HD vec2(float x, float y) {
+        x_v = x;
+        y_v = y;
+    }
+
+    HD static vec2 rep(float v) { return vec2(v,v); }
+
+    HD void set(float x, float y) {
+        x_v = x;
+        y_v = y;
+    }
+
+    HD void normalize() {
+        if (x_v == 0 && y_v == 0) return;
+        float len = (float) sqrt(x_v * x_v + y_v * y_v);
+        x_v = x_v / len;
+        y_v = y_v / len;
+    }
+
+    HD vec2 operator+(const vec2 &c) const {
+        return vec2(x() + c.x(), y() + c.y());
+    }
+
+    HD vec2 operator-(const vec2 &c) const {
+        return vec2(x() - c.x(), y() - c.y());
+    }
+
+    HD vec2 operator*(const vec2 &c) const {
+        return vec2(x() * c.x(), y() * c.y());
+    }
+};
+
+
+HD inline vec2 operator*(float scalar, const vec2& b) { return vec2::rep(scalar)*b; }
+HD inline vec2 operator*(const vec2& a, float scalar) { return a*vec2::rep(scalar); }
+
 class agent {
 public:
-    float cords[2];
-    float vect[2];      //vector should be normed, so after every change of vector, we have to call normalize() method
-    float dest[2];
-    HD inline float &x() { return cords[0]; }
+    vec2 p;         //(x,y) position
+    vec2 v;      //vector should be normed, so after every change of vector, we have to call normalize() method
+    vec2 d;
+    HD inline vec2 &pos() { return p; }
 
-    HD inline float &y() { return cords[1]; }
+    HD inline vec2 &vect() { return v; }
 
-    HD inline float &vx() { return vect[0]; }
+    HD inline vec2 &dest() { return d; }
 
-    HD inline float &vy() { return vect[1]; }
+    HD inline vec2 pos() const { return p; }
 
-    HD inline float &d_x() { return dest[0]; }
-
-    HD inline float &d_y() { return dest[1]; }
-
-    HD inline float x() const { return cords[0]; }
-
-    HD inline float y() const { return cords[1]; }
-
-    HD inline float vx() const { return vect[0]; }
-
-    HD inline float vy() const { return vect[1]; }
-
-    HD inline float d_x() const { return dest[0]; }
-
-    HD inline float d_y() const { return dest[1]; }
 
     HD agent() {}
 
     HD agent(float x, float y, float d_x, float d_y) {
-        cords[0] = x;
-        cords[1] = y;
-        dest[0] = d_x;
-        dest[1] = d_y;
+        p.set(x, y);
+        d.set(d_x, d_y);
     }
 
     HD void set_agent(float x, float y, float d_x, float d_y) {
-        cords[0] = x;
-        cords[1] = y;
-        dest[0] = d_x;
-        dest[1] = d_y;
+        p.set(x, y);
+        d.set(d_x, d_y);
     }
 
-    HD void set_vector(float vx, float vy) {
-        vect[0] = vx;
-        vect[1] = vy;
+    HD void set_vector(vec2 vect) {
+        v = vect;
     }
 
-    HD void normalize() {
-        if (vx() == 0 && vy() == 0) return;
-        float len = sqrt(vx() * vx() + vy() * vy());
-        vx() = vx() / len;
-        vy() = vy() / len;
-    }
 
 /**
  * moves agent with given speed s along vector vect
  **/
     HD void move(float s) {
-        x() += vx() * s;
-        y() += vy() * s;
+        p = p + v * s;
     }
 };
 

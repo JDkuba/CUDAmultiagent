@@ -8,7 +8,7 @@ static ofstream meta_file;
 
 void printAgentsPositions(agent* agents, int n_agents){
     for (int i = 0; i < n_agents; ++i)
-        cout << agents[i].x() << ' ' << agents[i].y() << '\n';
+        cout << agents[i].pos().x() << ' ' << agents[i].pos().y() << '\n';
 }
 
 void printAgentsStartPositions(agent* agents, int n_agents){
@@ -37,8 +37,8 @@ void writeAgenstStartPosition(agent* agents, int n_agents){
 void writeAgentsPositions(agent* agents, int n_agents){
     for (int i = 0; i < n_agents; ++i)
     {
-        int x = round(agents[i].x());
-        int y = round(agents[i].y());
+        int x = round(agents[i].pos().x());
+        int y = round(agents[i].pos().y());
         meta_file.write(reinterpret_cast<const char *>(&x), sizeof(x));
         meta_file.write(reinterpret_cast<const char *>(&y), sizeof(y));
     }
