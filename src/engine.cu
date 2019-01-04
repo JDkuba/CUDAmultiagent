@@ -24,9 +24,9 @@ __device__ int distance(vec2 a, vec2 b) {
     return sqrt((a.x() - b.x()) * (a.x() - b.x()) + (a.y() - b.y()) * (a.y() - b.y()));
 }
 
-__device__ vec2 compute_vo(agent* a1, agent* a2) {
-    vec2 v;
-    return v;
+__device__ vo compute_vo(agent* A, agent* B, int agent_radius) {
+    vo obs;
+    return obs;
 }
 
 __global__ void path(agent *agents, int n_agents, int board_x, int board_y, float max_speed) {  //A* maybe later
@@ -38,7 +38,7 @@ __global__ void path(agent *agents, int n_agents, int board_x, int board_y, floa
     }
 }
 
-__global__ void set(agent *agents, vec2 *obstacles, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
+__global__ void set(agent *agents, vo *obstacles, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix >= n_agents * n_agents) return;
     //first, second to indeksy ktore bedzie sprawdzal dany watek
@@ -50,15 +50,16 @@ __global__ void set(agent *agents, vec2 *obstacles, int n_agents, int board_x, i
         //todo, agents should pass each other
         //something like that http://gamma.cs.unc.edu/RVO/icra2008.pdf
         //or that https://www.youtube.com/watch?v=Hc6kng5A8lQ
-        obstacles[ix] = compute_vo(first_agent, second_agent);
+        obstacles[ix] = compute_vo(first_agent, second_agent, agent_radius);
     }
 }
 
 
-__global__ void move(agent *agents, vec2 *obstacles, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
+__global__ void move(agent *agents, vo *obstacles, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
         //jesli blisko to niech sie nie ruszaja
+        //todo check obstacles and choose best vector
         agent *james = &agents[ix];
         if (!distance(james->pos(), james->dest()) < agent_radius) {
             agents[ix].move(max_speed);
@@ -86,16 +87,16 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
     int grid_size = (n_agents * n_agents) / block_size + 1;     //number of pairs
 
     agent *d_agents;
-    vec2 *obstacles;
+    vo *obstacles;
 
     gpuErrchk(cudaMalloc(&d_agents, n_agents * sizeof(agent)));
-    gpuErrchk(cudaMalloc(&obstacles, n_agents * n_agents * sizeof(vec2)));
+    gpuErrchk(cudaMalloc(&obstacles, n_agents * n_agents * sizeof(vo)));
     gpuErrchk(cudaMemcpy(d_agents, agents, n_agents * sizeof(agent), cudaMemcpyHostToDevice));
 
     for (int i = 0; i < n_generations; ++i) {
         path<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, max_speed);
         cudaDeviceSynchronize();
-//        set<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
+        set<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
         cudaDeviceSynchronize();
         move<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
@@ -107,4 +108,5 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
     closeFiles();
 
     cudaFree(d_agents);
+    cudaFree(obstacles);
 }

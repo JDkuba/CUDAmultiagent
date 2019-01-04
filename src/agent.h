@@ -97,4 +97,10 @@ public:
     }
 };
 
+struct vo {
+    vec2 apex;
+    vec2 left;
+    vec2 right;
+};
+
 #endif
