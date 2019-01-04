@@ -1,5 +1,6 @@
 #include "agent.h"
 #include "engine.h"
+#include "vo.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -24,6 +25,11 @@ __device__ int distance(float x1, float y1, float x2, float y2) {
     return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
+__device__ vo compute_vo(agent* a1, agent* a2) {
+    vo v;
+    return v;
+}
+
 __global__ void path(agent *agents, int n_agents, int board_x, int board_y, float max_speed) {  //A* maybe later
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
@@ -33,7 +39,7 @@ __global__ void path(agent *agents, int n_agents, int board_x, int board_y, floa
     }
 }
 
-__global__ void set(agent *agents, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
+__global__ void set(agent *agents, vo *obstacles, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix >= n_agents * n_agents) return;
     //first, second to indeksy ktore bedzie sprawdzal dany watek
@@ -41,22 +47,16 @@ __global__ void set(agent *agents, int n_agents, int board_x, int board_y, int a
     int second = ix % n_agents;
     agent *first_agent = &agents[first];
     agent *second_agent = &agents[second];
-    if (first < second) {
-        if (distance(first_agent->x() + first_agent->vx() * max_speed,
-                     first_agent->y() + first_agent->vy() * max_speed,
-                     second_agent->x() + second_agent->vx() * max_speed,
-                     second_agent->y() + second_agent->vy() * max_speed) < agent_radius) {
-            //todo, agents should pass each other. Now, one agent (with smaller id) waits, an second is passing
-            //something like that http://gamma.cs.unc.edu/RVO/icra2008.pdf
-            first_agent->set_vector(0, 0);
-            second_agent->set_vector(-second_agent->vx(), second_agent->vy());
-//            second_agent->normalize();
-        }
+    if (first != second) {
+        //todo, agents should pass each other
+        //something like that http://gamma.cs.unc.edu/RVO/icra2008.pdf
+        //or that https://www.youtube.com/watch?v=Hc6kng5A8lQ
+        obstacles[ix] = compute_vo(first_agent, second_agent);
     }
 }
 
 
-__global__ void move(agent *agents, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
+__global__ void move(agent *agents, vo *obstacles, int n_agents, int board_x, int board_y, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
         //jesli blisko to niech sie nie ruszaja
@@ -87,16 +87,18 @@ void run(int n_agents, int n_generations, float agent_radius, int board_x, int b
     int grid_size = (n_agents * n_agents) / block_size + 1;     //number of pairs
 
     agent *d_agents;
+    vo *obstacles;
 
     gpuErrchk(cudaMalloc(&d_agents, n_agents * sizeof(agent)));
+    gpuErrchk(cudaMalloc(&obstacles, n_agents * n_agents * sizeof(obstacles)));
     gpuErrchk(cudaMemcpy(d_agents, agents, n_agents * sizeof(agent), cudaMemcpyHostToDevice));
 
     for (int i = 0; i < n_generations; ++i) {
         path<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, max_speed);
         cudaDeviceSynchronize();
-        set<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, agent_radius, max_speed);
+        set<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
         cudaDeviceSynchronize();
-        move<<<grid_size, block_size>>>(d_agents, n_agents, board_x, board_y, agent_radius, max_speed);
+        move<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, board_x, board_y, agent_radius, max_speed);
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
 
         // printAgentsPositions(agents, n_agents);
