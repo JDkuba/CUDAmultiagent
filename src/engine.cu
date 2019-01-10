@@ -21,17 +21,9 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-__device__ float distance(vec2 a, vec2 b) {
-    return sqrt((a.x() - b.x()) * (a.x() - b.x()) + (a.y() - b.y()) * (a.y() - b.y()));
-}
-
-__device__ float det(vec2 a, vec2 b) {
-    return a.x() * b.y() - a.y() * b.x();
-}
-
-__device__ vo compute_vo(agent *A, agent *B, int agent_radius, float max_speed) {
+__device__ vo compute_vo(const agent& A, const agent& B, int agent_radius, float max_speed) {
     vo obs;
-    vec2 pAB = B->pos() - A->pos();
+    vec2 pAB = B.pos() - A.pos();
     vec2 pABn = pAB.normalized();
     int rAB = 2 * agent_radius;
 
@@ -44,15 +36,15 @@ __device__ vo compute_vo(agent *A, agent *B, int agent_radius, float max_speed) 
 
         float sin2theta = 2.0f * sin(theta) * cos(theta);
         float s;
-        if (det(B->pos() - A->pos(), A->vect() - B->vect()) > 0.0f) {
-            s = 0.5f * det(A->vect() + B->vect(), left) / sin2theta;
-            apex = B->vect() + s * right;
+        if (det(B.pos() - A.pos(), A.vect() - B.vect()) > 0.0f) {
+            s = 0.5f * det(A.vect() + B.vect(), left) / sin2theta;
+            apex = B.vect() + s * right;
         } else {
-            s = 0.5f * det(A->vect() + B->vect(), right) / sin2theta;
-            apex = B->vect() + s * left;
+            s = 0.5f * det(A.vect() + B.vect(), right) / sin2theta;
+            apex = B.vect() + s * left;
         }
     } else {
-        apex = 0.5f * (A->vect() + B->vect() - pABn * (rAB - pAB.normalized()) / max_speed);
+        apex = 0.5f * (A.vect() + B.vect() - pABn * (rAB - pAB.normalized()) / max_speed);
         right = vec2(pABn.y(), -pABn.x());
         left = 0 - right;
     }
@@ -63,11 +55,16 @@ __device__ vo compute_vo(agent *A, agent *B, int agent_radius, float max_speed) 
     return obs;
 }
 
-__global__ void path(agent *agents, int n_agents) {  //A* maybe later
+__global__ void path(agent *agents, int n_agents, float max_speed, float agent_radius) {  //A* maybe later
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
-        agent *james = &agents[ix];
-        james->set_vector((james->dest() - james->pos()).normalized());
+        agent &james = agents[ix];
+        if(james.finished(agent_radius))
+            james.set_speed(0);
+        else{
+            james.set_vector((james.dest() - james.pos()).normalized());
+            james.set_speed(max_speed);
+        }
     }
 }
 
@@ -77,25 +74,21 @@ __global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_rad
     //first, second to are indices of considered agents
     int first = ix / n_agents;
     int second = ix % n_agents;
-    agent *first_agent = &agents[first];
-    agent *second_agent = &agents[second];
+    agent &agent1 = agents[first];
+    agent &agent2 = agents[second];
     if (first != second) {
         //todo, agents should pass each other
         //something like that http://gamma.cs.unc.edu/RVO/icra2008.pdf
         //or that https://www.youtube.com/watch?v=Hc6kng5A8lQ
-        obstacles[ix] = compute_vo(first_agent, second_agent, agent_radius, max_speed);
+        obstacles[ix] = compute_vo(agent1, agent2, agent_radius, max_speed);
     }
 }
 
 
-__global__ void move(agent *agents, vo *obstacles, int n_agents, int agent_radius, float max_speed) {
+__global__ void move(agent *agents, vo *obstacles, int n_agents) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
-        //if agent is close to destination he should stay there
-        agent *james = &agents[ix];
-        if (!distance(james->pos(), james->dest()) < agent_radius) {
-            agents[ix].move(max_speed);
-        }
+        agents[ix].move();
     }
 }
 
@@ -113,11 +106,11 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     int block_size = 1024;
     int grid_size = (n_agents * n_agents) / block_size + 1;
     for (int i = 0; i < n_generations; ++i) {
-        path<<<grid_size, block_size>>>(d_agents, n_agents);
+        path<<<grid_size, block_size>>>(d_agents, n_agents, max_speed, agent_radius);
         cudaDeviceSynchronize();
         set_vo<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, agent_radius, max_speed);
         cudaDeviceSynchronize();
-        move<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, agent_radius, max_speed);
+        move<<<grid_size, block_size>>>(d_agents, obstacles, n_agents);
 
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
         writeAgentsPositions(agents, n_agents);

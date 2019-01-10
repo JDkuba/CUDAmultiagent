@@ -82,11 +82,21 @@ HD inline vec2 operator-(float scalar, const vec2 &b) { return vec2::rep(scalar)
 
 HD inline vec2 operator-(const vec2 &a, float scalar) { return a - vec2::rep(scalar); }
 
+HD inline float distance(const vec2& a, const vec2& b) {
+    return sqrt((a.x() - b.x()) * (a.x() - b.x()) + (a.y() - b.y()) * (a.y() - b.y()));
+}
+
+HD inline float det(const vec2& a, const vec2& b) {
+    return a.x() * b.y() - a.y() * b.x();
+}
+
 class agent {
-public:
     vec2 p;         //(x,y) position
     vec2 v;      //vector should be normed, so after every change of vector, we have to call normalize() method
     vec2 d;
+    float s;
+public:
+    
     HD inline vec2 &pos() { return p; }
 
     HD inline vec2 &vect() { return v; }
@@ -99,11 +109,14 @@ public:
 
     HD inline vec2 dest() const { return d; }
 
+    HD inline float speed() const { return s; }
+
+    HD inline vec2 svect() const { return v*s; }
+
     HD agent() {}
 
     HD agent(float x, float y, float d_x, float d_y) {
-        p.set(x, y);
-        d.set(d_x, d_y);
+        set_agent(x, y, d_x, d_y);
     }
 
     HD void set_agent(float x, float y, float d_x, float d_y) {
@@ -111,16 +124,14 @@ public:
         d.set(d_x, d_y);
     }
 
-    HD void set_vector(vec2 vect) {
-        v = vect;
-    }
+    HD void set_vector(vec2 vect) { v = vect; }
 
+    HD void set_speed(float speed){ s = speed; }
 
-/**
- * moves agent with given speed s along vector v
- **/
-    HD void move(float s) {
-        p = p + v * s;
+    HD void move() { p = p + v * s; }
+
+    HD bool finished(float my_radius){
+        return distance(p, d) < my_radius;
     }
 };
 
