@@ -55,7 +55,17 @@ __device__ vo compute_vo(const agent& A, const agent& B, int agent_radius, float
     return obs;
 }
 
-__global__ void path(agent *agents, int n_agents, float max_speed, float agent_radius) {  //A* maybe later
+__device__ vo compute_simple_vo(const agent& A, const agent& B, int agent_radius){
+    vo obs;
+    obs.apex = A.pos() + B.svect();
+    vec2 pAB = B.pos() - A.pos();
+    float theta = asin(2 * agent_radius / pAB.length());
+    obs.left = pAB.normalized().rotate(theta);
+    obs.right = pAB.normalized().rotate(-theta);
+    return obs;
+}
+
+__global__ void find_path(agent *agents, int n_agents, float agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     if (ix < n_agents) {
         agent &james = agents[ix];
@@ -68,28 +78,23 @@ __global__ void path(agent *agents, int n_agents, float max_speed, float agent_r
     }
 }
 
-__global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_radius, float max_speed) {
+__global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_radius) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
-    if (ix >= n_agents * n_agents) return;
-    //first, second to are indices of considered agents
+    if (ix >= n_agents * n_agents) 
+        return;
     int first = ix / n_agents;
     int second = ix % n_agents;
     agent &agent1 = agents[first];
     agent &agent2 = agents[second];
-    if (first != second) {
-        //todo, agents should pass each other
-        //something like that http://gamma.cs.unc.edu/RVO/icra2008.pdf
-        //or that https://www.youtube.com/watch?v=Hc6kng5A8lQ
-        obstacles[ix] = compute_vo(agent1, agent2, agent_radius, max_speed);
-    }
+    if (first != second)
+        obstacles[ix] = compute_simple_vo(agent1, agent2, agent_radius);
 }
 
 
 __global__ void move(agent *agents, vo *obstacles, int n_agents) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
-    if (ix < n_agents) {
+    if (ix < n_agents)
         agents[ix].move();
-    }
 }
 
 void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, agent* agents) {
@@ -106,9 +111,9 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     int block_size = 1024;
     int grid_size = (n_agents * n_agents) / block_size + 1;
     for (int i = 0; i < n_generations; ++i) {
-        path<<<grid_size, block_size>>>(d_agents, n_agents, max_speed, agent_radius);
+        find_path<<<grid_size, block_size>>>(d_agents, n_agents, agent_radius, max_speed);
         cudaDeviceSynchronize();
-        set_vo<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, agent_radius, max_speed);
+        set_vo<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, agent_radius);
         cudaDeviceSynchronize();
         move<<<grid_size, block_size>>>(d_agents, obstacles, n_agents);
 

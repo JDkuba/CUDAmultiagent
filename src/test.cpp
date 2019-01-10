@@ -1,7 +1,10 @@
 #include "agent.h"
 #include "engine.h"
+#include "smath.h"
 #include <stdio.h>
 #include <iostream>
+#include <string.h>
+#include <assert.h>
 
 using namespace std;
 
@@ -11,8 +14,20 @@ float rand_float(float min, float max) {
     return ((((float) rand()) / (float) RAND_MAX) * (max - min)) + min;
 }
 
+static void testRayIntersect();
+
+static void test(){
+    testRayIntersect();
+}
+
 int main(int argc, char const *argv[])
 {
+    if(argc > 1 and strcmp(argv[1], "--test") == 0){
+        cout << "testing...\n"; 
+        test();
+        return 0;
+    }
+
     int n_agents, n_generations, board_x, board_y;
     float max_speed;
     float agent_radius;
@@ -28,4 +43,29 @@ int main(int argc, char const *argv[])
 
     run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, agents);
     return 0;
+}
+
+static void testRayIntersect(){
+    {
+        ray ray1(0, 0, 0, 1);
+        ray ray2(2, 3, -1, 0);
+        vec2 p = intersect_rays(ray1, ray2);
+        assert(p.x() == 0 and p.y() == 3);
+        cout << p.x() << ' ' << p.y() << '\n';
+    }
+    {
+        ray ray1(0, 0, 0, 1);
+        ray ray2(0, 0, 1, 0);
+        vec2 p = intersect_rays(ray1, ray2);
+        assert(p.x() == 0 and p.y() == 0);
+        cout << p.x() << ' ' << p.y() << '\n';
+    }
+    {
+        ray ray1(0, 1, 0, 1);
+        ray ray2(1, 1, 0, 1);
+        vec2 p = intersect_rays(ray1, ray2);
+        assert(isnan(p.x()) and isnan(p.y()));
+        cout << p.x() << ' ' << p.y() << '\n';
+    }
+    cout << "rayTest: OK\n";
 }

@@ -93,5 +93,8 @@ simpleTest: all
 	tar -jcvf data.tar.bz2 *.out 
 	rm *.out
 
+mathTest: all
+	./bin/programd --test
+
 -include $(DEPS) $(CUDEPS)
 
