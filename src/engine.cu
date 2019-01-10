@@ -21,12 +21,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-float rand_float(float min, float max) {
-    if (max == min) return max;
-    if (max < min) return ((((float) rand()) / (float) RAND_MAX) * (min - max)) + max;
-    return ((((float) rand()) / (float) RAND_MAX) * (max - min)) + min;
-}
-
 __device__ float distance(vec2 a, vec2 b) {
     return sqrt((a.x() - b.x()) * (a.x() - b.x()) + (a.y() - b.y()) * (a.y() - b.y()));
 }
@@ -105,47 +99,31 @@ __global__ void move(agent *agents, vo *obstacles, int n_agents, int agent_radiu
     }
 }
 
-void run(int n_agents, int n_generations, float agent_radius, int board_x, int board_y) {
-    float max_speed = 1;
-
+void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, agent* agents) {
     openFiles();
     putMetadataToFile(n_agents, n_generations, agent_radius, board_x, board_y);
-
-    agent *agents = new agent[n_agents];
-    srand(time(NULL));
-    for (int i = 0; i < n_agents; ++i) {
-        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x),
-                            rand_float(0, board_y));
-        agents[i].vect() = agents[i].vect().normalized();
-    }
-
-    // printAgentsStartPositions(agents, n_agents);
     writeAgenstStartPosition(agents, n_agents);
-
-    int block_size = 1024;
-    int grid_size = (n_agents * n_agents) / block_size + 1;     //number of pairs
 
     agent *d_agents;
     vo *obstacles;
-
     gpuErrchk(cudaMalloc(&d_agents, n_agents * sizeof(agent)));
     gpuErrchk(cudaMalloc(&obstacles, n_agents * n_agents * sizeof(vo)));
     gpuErrchk(cudaMemcpy(d_agents, agents, n_agents * sizeof(agent), cudaMemcpyHostToDevice));
 
+    int block_size = 1024;
+    int grid_size = (n_agents * n_agents) / block_size + 1;
     for (int i = 0; i < n_generations; ++i) {
         path<<<grid_size, block_size>>>(d_agents, n_agents);
         cudaDeviceSynchronize();
         set_vo<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, agent_radius, max_speed);
         cudaDeviceSynchronize();
         move<<<grid_size, block_size>>>(d_agents, obstacles, n_agents, agent_radius, max_speed);
-        gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
 
-        // printAgentsPositions(agents, n_agents);
+        gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
         writeAgentsPositions(agents, n_agents);
     }
 
     closeFiles();
-
     cudaFree(d_agents);
     cudaFree(obstacles);
 }
