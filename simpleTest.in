@@ -1,2 +1,2 @@
-50 1000 10 1000 1000 1
-// agents generations agent_radius boardx boardy max_speed
+50 1000 10 1000 1000 40 40
+// agents generations agent_radius boardx boardy max_speed move_divider

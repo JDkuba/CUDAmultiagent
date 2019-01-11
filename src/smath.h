@@ -148,6 +148,14 @@ struct vo {
     vec2 left;
     vec2 right;
 
+    HD inline void set_invalid(){
+        apex.set(nanf("1"), nanf("1"));
+    }
+
+    HD inline bool invalid(){
+        return apex.invalid();
+    }
+
     HD inline ray left_ray(){
         return ray(apex, left);
     }

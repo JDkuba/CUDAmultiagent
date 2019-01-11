@@ -32,10 +32,10 @@ int main(int argc, char const *argv[])
         return 0;
     }
 
-    int n_agents, n_generations, board_x, board_y;
+    int n_agents, n_generations, board_x, board_y, move_divider;
     float max_speed;
     float agent_radius;
-    cin >> n_agents >> n_generations >> agent_radius >> board_x >> board_y >> max_speed;
+    cin >> n_agents >> n_generations >> agent_radius >> board_x >> board_y >> max_speed >> move_divider;
     
     agent *agents = new agent[n_agents];
     srand(time(NULL));
@@ -45,7 +45,7 @@ int main(int argc, char const *argv[])
         agents[i].vect() = agents[i].vect().normalized();
     }
 
-    run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, agents);
+    run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, move_divider, agents);
     return 0;
 }
 
@@ -78,10 +78,16 @@ static void testVects(){
     {
         vec2 v1(0, 1);
         vec2 v2(1, 0);
-        cout << angle(v1, v2) << '\n';
+        assert(angle(v1, v2) < 0);
     }
+    cout << "vectsTEst: OK\n";
 }
 
 static void testReinpretCast(){
-
+    unsigned long long point;
+    float* ptr = reinterpret_cast<float*>(&point);
+    *ptr = 25.0f;
+    *(ptr + 1) = 41.0f;
+    float* ptr1 = reinterpret_cast<float*>(&point);
+    cout << *ptr1 << ' ' << *(ptr1+1) << '\n';
 }

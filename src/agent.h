@@ -50,7 +50,7 @@ public:
 
     HD void set_speed(float speed){ s = speed; }
 
-    HD void move() { p = p + v * s; }
+    HD void move(int move_divider) { p = p + v * (s/move_divider); }
 
     HD inline bool finished (float my_radius) const{
         return distance(p, d) < my_radius;
