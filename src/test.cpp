@@ -15,9 +15,13 @@ float rand_float(float min, float max) {
 }
 
 static void testRayIntersect();
+static void testReinpretCast();
+static void testVects();
 
 static void test(){
     testRayIntersect();
+    testReinpretCast();
+    testVects();
 }
 
 int main(int argc, char const *argv[])
@@ -68,4 +72,16 @@ static void testRayIntersect(){
         cout << p.x() << ' ' << p.y() << '\n';
     }
     cout << "rayTest: OK\n";
+}
+
+static void testVects(){
+    {
+        vec2 v1(0, 1);
+        vec2 v2(1, 0);
+        cout << angle(v1, v2) << '\n';
+    }
+}
+
+static void testReinpretCast(){
+
 }

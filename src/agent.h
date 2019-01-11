@@ -14,6 +14,7 @@ class agent {
     vec2 v;      //vector should be normed, so after every change of vector, we have to call normalize() method
     vec2 d;
     float s;
+    bool dead = false;
 public:
     
     HD inline vec2 &pos() { return p; }
@@ -32,6 +33,8 @@ public:
 
     HD inline vec2 svect() const { return v*s; }
 
+    HD inline float dist() const { return distance(p, d); }
+
     HD agent() {}
 
     HD agent(float x, float y, float d_x, float d_y) {
@@ -49,8 +52,16 @@ public:
 
     HD void move() { p = p + v * s; }
 
-    HD bool finished(float my_radius){
+    HD inline bool finished (float my_radius) const{
         return distance(p, d) < my_radius;
+    }
+
+    HD bool isdead() const{
+        return dead;
+    }
+
+    HD void killme(){
+        dead = true;
     }
 };
 
