@@ -23,21 +23,29 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-constexpr float ALFA = M_PI/2;
+constexpr float ALFA = M_PI;
 constexpr int RESOLUTION = 180;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
-constexpr float COLLISION_RADIUS = 100;
+constexpr float COLLISION_RADIUS = 200;
 constexpr int MAX_BOARDS = 10000;
 constexpr float ALFA_EPS = ALFA/RESOLUTION;
 constexpr int MULTIPLIER = 1000000000/(10*MAX_BOARDS); 
 
-__device__ vo compute_simple_vo(const agent& A, const agent& B, int agent_radius){
+__device__ vo compute_simple_vo(const agent& A, const agent& B, int agent_radius, float max_speed){
     vo obs;
     vec2 pAB = B.pos() - A.pos();
-    obs.apex = A.pos() + B.svect() + (pAB.normalized()*agent_radius);
+    vec2 pABn = pAB.normalized();
+    obs.apex = A.pos() + B.svect() + (pABn*agent_radius);
     float theta = asin(2 * agent_radius / pAB.length());
-    obs.left = pAB.normalized().rotate(theta);
-    obs.right = pAB.normalized().rotate(-theta);
+    obs.left = pABn.rotate(theta);
+    obs.right = pABn.rotate(-theta);
+    if(obs.contains(A.pos())){
+        float x = distance(A.pos(), obs.apex);
+        float beta = theta + asin((x * sin(theta))/max_speed);
+        obs.apex = obs.apex - B.svect();
+        obs.left = pABn.rotate(beta);
+        obs.right = pABn.rotate(-beta);
+    }
     return obs;
 }
 
@@ -55,7 +63,7 @@ __global__ void find_path(agent *agents, int n_agents, float agent_radius, float
     }
 }
 
-__global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_radius) {
+__global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_radius, float max_speed) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     int i1 = ix / n_agents;
     int i2 = ix % n_agents;
@@ -64,11 +72,8 @@ __global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_rad
 
     agent &A = agents[i1];
     agent &B = agents[i2];
-    if(distance(A.pos(), B.pos()) < COLLISION_RADIUS){
-        obstacles[ix] = compute_simple_vo(agents[i1], agents[i2], agent_radius);
-        if(obstacles[ix].contains(A.pos()))
-            obstacles[ix].set_invalid();
-    }
+    if(distance(A.pos(), B.pos()) < COLLISION_RADIUS)
+        obstacles[ix] = compute_simple_vo(agents[i1], agents[i2], agent_radius, max_speed);
     else
         obstacles[ix].set_invalid();
 }
@@ -202,7 +207,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
         find_path<<<grid_size_agents, block_size>>>(d_agents, n_agents, agent_radius, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
 
-        set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius);
+        set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
         get_worst_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
