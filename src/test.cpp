@@ -38,14 +38,14 @@ int main(int argc, char const *argv[])
     cin >> n_agents >> n_generations >> agent_radius >> board_x >> board_y >> max_speed >> move_divider;
     
     agent *agents = new agent[n_agents];
-    srand(time(NULL));
-    for (int i = 0; i < n_agents; ++i) {
-        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x),
-                            rand_float(0, board_y));
-        agents[i].vect() = agents[i].vect().normalized();
-    }
-//    agents[0].set_agent(100, 100, board_x - 100, board_y - 100);
-//    agents[1].set_agent(99, board_y - 99, board_x - 99, 99);
+//    srand(time(NULL));
+//    for (int i = 0; i < n_agents; ++i) {
+//        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x),
+//                            rand_float(0, board_y));
+//        agents[i].vect() = agents[i].vect().normalized();
+//    }
+    agents[0].set_agent(100, 100, board_x - 100, board_y - 100);
+    agents[1].set_agent(99, board_y - 99, board_x - 99, 99);
 
     run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, move_divider, agents);
     return 0;
