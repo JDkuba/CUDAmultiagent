@@ -175,11 +175,11 @@ __global__ void move(agent *agents, int n_agents, int move_divider) {
     agents[ix].move(move_divider);
 }
 
-void print_details(agent* agents, vo* obstacles, int n) {
+void print_details(agent *agents, vo *obstacles, int n) {
     for (int i = 0; i < n; ++i) {
         agents[i].print(i);
         for (int j = 0; j < n; ++j) {
-            obstacles[i * n + j].print(i, j);
+            if (i != j) obstacles[i * n + j].print(i, j);
         }
     }
     printf("\n");
