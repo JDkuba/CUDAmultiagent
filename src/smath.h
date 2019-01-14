@@ -168,6 +168,11 @@ struct vo {
         vec2 vect = p - apex;
         return angle(right, vect) >= 0 and angle(left, vect) <= 0;
     }
+
+    HD void print(int i, int j) {
+        printf("id: (%d, %d), apex: (%.5f, %.5f), left: (%+.5f, %+.5f), right: (%.5f, %.5f)\n",
+                i, j, apex.x(), apex.y(), left.x(), left.y(), right.x(), right.y());
+    }
 };
 
 

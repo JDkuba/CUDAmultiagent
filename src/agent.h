@@ -7,6 +7,7 @@
 #define HD
 #endif
 
+#include <cstdio>
 #include "smath.h"
 
 class agent {
@@ -62,6 +63,10 @@ public:
 
     HD void killme(){
         dead = true;
+    }
+
+    HD void print(int id) {
+        printf("agent: %d, p: (%.5f, %.5f), v: (%+.5f, %+.5f), d: (%.5f, %.5f)\n", id, p.x(), p.y(), v.x(), v.y(), d.x(), d.y());
     }
 };
 

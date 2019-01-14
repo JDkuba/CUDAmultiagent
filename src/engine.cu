@@ -175,6 +175,16 @@ __global__ void move(agent *agents, int n_agents, int move_divider) {
     agents[ix].move(move_divider);
 }
 
+void print_details(agent* agents, vo* obstacles, int n) {
+    for (int i = 0; i < n; ++i) {
+        agents[i].print(i);
+        for (int j = 0; j < n; ++j) {
+            obstacles[i * n + j].print(i, j);
+        }
+    }
+    printf("\n");
+}
+
 void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, int move_divider, agent* agents) {
     if(board_x > MAX_BOARDS || board_y > MAX_BOARDS)
         std::cout << "Exceeded MAX_BOARDS size. Bugs may occur\n";
@@ -187,6 +197,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     int pairs_number = n_agents * n_agents;
     agent *d_agents;
     vo *d_obstacles;
+    vo *h_obstacles = new vo[n_agents * n_agents];      //to remove
     int *d_best_distances;
     unsigned long long *d_best_intersects;
     gpuErrchk(cudaMalloc(&d_agents, n_agents * sizeof(agent)));
@@ -209,11 +220,15 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
 
         set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
+        gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));  //to remove
+
         get_worst_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
 
         apply_best_velocities<<<grid_size_agents, block_size>>>(d_agents, d_best_distances, d_best_intersects, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
+
+        print_details(agents, h_obstacles, n_agents);
         move<<<grid_size_pairs, block_size>>>(d_agents, n_agents, move_divider);
 
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
@@ -221,6 +236,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     }
 
     closeFiles();
+    delete h_obstacles;
     cudaFree(d_agents);
     cudaFree(d_obstacles);
 }
