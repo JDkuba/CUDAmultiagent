@@ -59,7 +59,7 @@ public:
     HD vec2 normalized() {
         float len = length();
         if (len == 0) return rep(0);
-        return {x_v / len, y_v = y_v / len};
+        return {x_v / len, y_v / len};
     }
 
     HD vec2 rotate(float theta) {

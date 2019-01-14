@@ -31,21 +31,22 @@ constexpr int MAX_BOARDS = 10000;
 constexpr float ALFA_EPS = ALFA/RESOLUTION;
 constexpr int MULTIPLIER = 1000000000/(10*MAX_BOARDS); 
 
-__device__ vo compute_simple_vo(const agent& A, const agent& B, int agent_radius, float max_speed){
+__device__ vo compute_simple_vo(const agent& A, const agent& B, int agent_radius, float max_speed, int move_divider){
     vo obs;
     vec2 pAB = B.pos() - A.pos();
     vec2 pABn = pAB.normalized();
     obs.apex = A.pos() + B.svect() + (pABn*agent_radius);
-    float theta = asin(2 * agent_radius / pAB.length());
+    float theta = asin(2 * agent_radius / (pAB.length()));
+//    printf("pAB: (%.5f, %.5f), var: %f\n", pAB.x(), pAB.y(), 2 * agent_radius / (pAB.length()));
     obs.left = pABn.rotate(theta);
     obs.right = pABn.rotate(-theta);
-    if(obs.contains(A.pos())){
-        float x = distance(A.pos(), obs.apex);
-        float beta = theta + asin((x * sin(theta))/max_speed);
-        obs.apex = obs.apex - B.svect();
-        obs.left = pABn.rotate(beta);
-        obs.right = pABn.rotate(-beta);
-    }
+//    if (obs.contains(A.pos())) {
+//        float x = distance(A.pos(), obs.apex);
+//        float beta = theta + asin((x * sin(theta)) / max_speed);
+//        obs.apex = obs.apex - B.svect();
+//        obs.left = pABn.rotate(beta);
+//        obs.right = pABn.rotate(-beta);
+//    }
     return obs;
 }
 
@@ -63,7 +64,7 @@ __global__ void find_path(agent *agents, int n_agents, float agent_radius, float
     }
 }
 
-__global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_radius, float max_speed) {
+__global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_radius, float max_speed, int move_divider) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     int i1 = ix / n_agents;
     int i2 = ix % n_agents;
@@ -73,7 +74,7 @@ __global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_rad
     agent &A = agents[i1];
     agent &B = agents[i2];
     if(distance(A.pos(), B.pos()) < COLLISION_RADIUS)
-        obstacles[ix] = compute_simple_vo(agents[i1], agents[i2], agent_radius, max_speed);
+        obstacles[ix] = compute_simple_vo(agents[i1], agents[i2], agent_radius, max_speed, move_divider);
     else
         obstacles[ix].set_invalid();
 }
@@ -218,7 +219,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
         find_path<<<grid_size_agents, block_size>>>(d_agents, n_agents, agent_radius, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
 
-        set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius, max_speed);
+        set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius, max_speed, move_divider);
         gpuErrchk(cudaDeviceSynchronize());
         gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));  //to remove
 
@@ -228,7 +229,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
         apply_best_velocities<<<grid_size_agents, block_size>>>(d_agents, d_best_distances, d_best_intersects, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
 
-        print_details(agents, h_obstacles, n_agents);
+//        print_details(agents, h_obstacles, n_agents);
         move<<<grid_size_pairs, block_size>>>(d_agents, n_agents, move_divider);
 
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
