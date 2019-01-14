@@ -16,6 +16,9 @@
 #define __global__
 #endif
 
+#define DEBUG 0
+#define DEBUG_CUDA 0
+
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true) {
     if (code != cudaSuccess) {
         fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
@@ -23,7 +26,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-int DEBUG = 0;
 constexpr float ALFA = M_PI;
 constexpr int RESOLUTION = 180;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
@@ -38,7 +40,7 @@ __device__ vo compute_simple_vo(const agent &A, const agent &B, int agent_radius
     vec2 pABn = pAB.normalized();
     obs.apex = A.pos() + B.svect() + (pABn * agent_radius);
     float theta = asin(2 * agent_radius / (pAB.length()));
-//    printf("pAB: (%.5f, %.5f), var: %f\n", pAB.x(), pAB.y(), 2 * agent_radius / (pAB.length()));
+    if (DEBUG_CUDA) printf("pAB: (%.5f, %.5f), var: %f\n", pAB.x(), pAB.y(), 2 * agent_radius / (pAB.length()));
     obs.left = pABn.rotate(theta);
     obs.right = pABn.rotate(-theta);
 //    if (obs.contains(A.pos())) {
