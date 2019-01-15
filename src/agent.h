@@ -17,7 +17,7 @@ class agent {
     float s;
     bool dead = false;
 public:
-    
+
     HD inline vec2 &pos() { return p; }
 
     HD inline vec2 &vect() { return v; }
@@ -32,7 +32,7 @@ public:
 
     HD inline float speed() const { return s; }
 
-    HD inline vec2 svect() const { return v*s; }
+    HD inline vec2 svect() const { return v.normalized() * s; }
 
     HD inline float dist() const { return distance(p, d); }
 
@@ -47,26 +47,32 @@ public:
         d.set(d_x, d_y);
     }
 
+    HD void set_agent(const vec2 &pos, const vec2 &dest) {
+        p = pos;
+        d = dest;
+    }
+
     HD void set_vector(vec2 vect) { v = vect; }
 
-    HD void set_speed(float speed){ s = speed; }
+    HD void set_speed(float speed) { s = speed; }
 
-    HD void move(int move_divider) { p = p + v * (s/move_divider); }
+    HD void move(int move_divider) { p = p + v * (s / move_divider); }
 
-    HD inline bool finished (float my_radius) const{
+    HD inline bool finished(float my_radius) const {
         return distance(p, d) < my_radius;
     }
 
-    HD bool isdead() const{
+    HD bool isdead() const {
         return dead;
     }
 
-    HD void killme(){
+    HD void killme() {
         dead = true;
     }
 
     HD void print(int id) {
-        printf("agent: %d, p: (%.5f, %.5f), v: (%+.5f, %+.5f), d: (%.5f, %.5f)\n", id, p.x(), p.y(), v.x(), v.y(), d.x(), d.y());
+        printf("agent: %d, p: (%.5f, %.5f), v: (%+.5f, %+.5f), d: (%.5f, %.5f)\n", id, p.x(), p.y(), v.x(), v.y(),
+               d.x(), d.y());
     }
 };
 

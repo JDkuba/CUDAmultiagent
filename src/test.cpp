@@ -15,19 +15,47 @@ float rand_float(float min, float max) {
 }
 
 static void testRayIntersect();
+
 static void testReinpretCast();
+
 static void testVects();
 
-static void test(){
+static void test() {
     testRayIntersect();
     testReinpretCast();
     testVects();
 }
 
-int main(int argc, char const *argv[])
-{
-    if(argc > 1 and strcmp(argv[1], "--test") == 0){
-        cout << "testing...\n"; 
+//n agents
+void circle_scenario(int n, agent *agents, int board_x, int board_y) {
+    vec2 v, op;
+    float angle = 2.0f * 3.141f / n;
+    v.set(0, (board_y - 50) / 2);
+    op.set(0, -(board_y - 50) / 2);
+    for (int i = 0; i < n; ++i) {
+        agents[i].set_agent(v + vec2(board_x / 2, board_y / 2), op + vec2(board_x / 2, board_y / 2));
+        v = v.rotate(angle);
+        op = op.rotate(angle);
+    }
+}
+
+void random_scenario(int n, agent *agents, int board_x, int board_y) {
+    srand(time(NULL));
+    for (int i = 0; i < n; ++i) {
+        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x), rand_float(0, board_y));
+        agents[i].vect() = agents[i].vect().normalized();
+    }
+}
+
+//2 agents
+void cross_scenario(agent *agents, int board_x, int board_y) {
+    agents[0].set_agent(100, 100, board_x - 100, board_y - 100);
+    agents[1].set_agent(99, board_y - 99, board_x - 99, 99);
+}
+
+int main(int argc, char const *argv[]) {
+    if (argc > 1 and strcmp(argv[1], "--test") == 0) {
+        cout << "testing...\n";
         test();
         return 0;
     }
@@ -37,21 +65,14 @@ int main(int argc, char const *argv[])
     float agent_radius;
     cin >> n_agents >> n_generations >> agent_radius >> board_x >> board_y >> max_speed >> move_divider;
 
-    agent *agents = new agent[n_agents];
-    srand(time(NULL));
-    for (int i = 0; i < n_agents; ++i) {
-        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x),
-                            rand_float(0, board_y));
-        agents[i].vect() = agents[i].vect().normalized();
-    }
-//    agents[0].set_agent(100, 100, board_x - 100, board_y - 100);      //scenario with two agents
-//    agents[1].set_agent(99, board_y - 99, board_x - 99, 99);
+    auto *agents = new agent[n_agents];
+    circle_scenario(n_agents, agents, board_x, board_y);
 
     run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, move_divider, agents);
     return 0;
 }
 
-static void testRayIntersect(){
+static void testRayIntersect() {
     {
         ray ray1(0, 0, 0, 1);
         ray ray2(2, 3, -1, 0);
@@ -76,7 +97,7 @@ static void testRayIntersect(){
     cout << "rayTest: OK\n";
 }
 
-static void testVects(){
+static void testVects() {
     {
         vec2 v1(0, 1);
         vec2 v2(1, 0);
@@ -85,11 +106,11 @@ static void testVects(){
     cout << "vectsTEst: OK\n";
 }
 
-static void testReinpretCast(){
+static void testReinpretCast() {
     unsigned long long point;
-    float* ptr = reinterpret_cast<float*>(&point);
+    float *ptr = reinterpret_cast<float *>(&point);
     *ptr = 25.0f;
     *(ptr + 1) = 41.0f;
-    float* ptr1 = reinterpret_cast<float*>(&point);
-    cout << *ptr1 << ' ' << *(ptr1+1) << '\n';
+    float *ptr1 = reinterpret_cast<float *>(&point);
+    cout << *ptr1 << ' ' << *(ptr1 + 1) << '\n';
 }

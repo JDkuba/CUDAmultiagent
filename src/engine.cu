@@ -17,7 +17,6 @@
 #endif
 
 #define DEBUG 0
-#define DEBUG_CUDA 0
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true) {
     if (code != cudaSuccess) {
@@ -29,7 +28,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 constexpr float ALFA = M_PI;
 constexpr int RESOLUTION = 180;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
-constexpr float COLLISION_RADIUS = 200;
 constexpr int MAX_BOARDS = 10000;
 constexpr float ALFA_EPS = ALFA / RESOLUTION;
 constexpr int MULTIPLIER = 1000000000 / (10 * MAX_BOARDS);
@@ -38,9 +36,8 @@ __device__ vo compute_simple_vo(const agent &A, const agent &B, int agent_radius
     vo obs;
     vec2 pAB = B.pos() - A.pos();
     vec2 pABn = pAB.normalized();
-    obs.apex = A.pos() + B.svect() + (pABn * agent_radius);
+    obs.apex = A.pos() + B.svect();//+ (pABn * agent_radius);
     float theta = asin(2 * agent_radius / (pAB.length()));
-    if (DEBUG_CUDA) printf("pAB: (%.5f, %.5f), var: %f\n", pAB.x(), pAB.y(), 2 * agent_radius / (pAB.length()));
     obs.left = pABn.rotate(theta);
     obs.right = pABn.rotate(-theta);
 //    if (obs.contains(A.pos())) {
@@ -60,8 +57,10 @@ __global__ void find_path(agent *agents, int n_agents, float agent_radius, float
 
     agent &james = agents[ix];
     james.set_vector((james.dest() - james.pos()).normalized());
-    if (james.finished(agent_radius) or james.isdead())
+    if (james.finished(agent_radius) or james.isdead()) {
         james.set_speed(0);
+        james.killme();
+    }
     else {
         james.set_speed(max_speed);
     }
@@ -76,10 +75,15 @@ __global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_rad
 
     agent &A = agents[i1];
     agent &B = agents[i2];
-    if (distance(A.pos(), B.pos()) < COLLISION_RADIUS)
+    if (distance(A.pos(), B.pos()) < (2.5 * agent_radius))
         obstacles[ix] = compute_simple_vo(agents[i1], agents[i2], agent_radius, max_speed);
     else
         obstacles[ix].set_invalid();
+}
+
+__global__ void clear_vo(vo *obstacles, int n_agents) {
+    int ix = blockDim.x * blockIdx.x + threadIdx.x;
+    obstacles[ix].set_invalid();
 }
 
 __global__ void clear_best_distances(int *best_distances, int rays_number) {
@@ -173,14 +177,14 @@ __global__ void move(agent *agents, int n_agents, int move_divider) {
     if (ix >= n_agents)
         return;
 
-    agents[ix].move(move_divider);
+    if (!agents[ix].isdead()) agents[ix].move(move_divider);
 }
 
 void print_details(agent *agents, vo *obstacles, int n) {
     for (int i = 0; i < n; ++i) {
         agents[i].print(i);
         for (int j = 0; j < n; ++j) {
-            if (i != j) obstacles[i * n + j].print(i, j);
+            if (i != j && !obstacles[i * n + j].invalid()) obstacles[i * n + j].print(i, j);
         }
     }
     printf("\n");
@@ -215,13 +219,14 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
 
     for (int i = 0; i < n_generations; ++i) {
         clear_best_distances<<<grid_size_rays, block_size>>>(d_best_distances, rays_number);
+        clear_vo<<<grid_size_pairs, block_size>>>(d_obstacles, n_agents);
         gpuErrchk(cudaDeviceSynchronize());
         find_path<<<grid_size_agents, block_size>>>(d_agents, n_agents, agent_radius, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
 
         set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
-        if (DEBUG) gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));  //to remove
+        if (DEBUG) gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));
 
         get_worst_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
