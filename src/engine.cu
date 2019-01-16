@@ -16,7 +16,8 @@
 #define __global__
 #endif
 
-#define DEBUG 0
+bool DEBUG_FLAG = false;
+void set_debug(){ DEBUG_FLAG = true; }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true) {
     if (code != cudaSuccess) {
@@ -226,7 +227,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
 
         set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
-        if (DEBUG) gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));
+        if (DEBUG_FLAG) gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));
 
         get_worst_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
@@ -234,7 +235,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
         apply_best_velocities<<<grid_size_agents, block_size>>>(d_agents, d_best_distances, d_best_intersects, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
 
-        if (DEBUG) print_details(agents, h_obstacles, n_agents);
+        if (DEBUG_FLAG) print_details(agents, h_obstacles, n_agents);
         move<<<grid_size_pairs, block_size>>>(d_agents, n_agents, move_divider);
 
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));

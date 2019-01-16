@@ -26,22 +26,21 @@ static void test() {
     testVects();
 }
 
-//n agents
-void circle_scenario(int n, agent *agents, int board_x, int board_y) {
+void circle_scenario(int n_agents, agent *agents, int board_x, int board_y) {
     vec2 v, op;
-    float angle = 2.0f * 3.141f / n;
+    float angle = 2.0f * 3.141f / n_agents;
     v.set(0, (board_y - 50) / 2);
     op.set(0, -(board_y - 50) / 2);
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n_agents; ++i) {
         agents[i].set_agent(v + vec2(board_x / 2, board_y / 2), op + vec2(board_x / 2, board_y / 2));
         v = v.rotate(angle);
         op = op.rotate(angle);
     }
 }
 
-void random_scenario(int n, agent *agents, int board_x, int board_y) {
+void random_scenario(int n_agents, agent *agents, int board_x, int board_y) {
     srand(time(NULL));
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n_agents; ++i) {
         agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x), rand_float(0, board_y));
         agents[i].vect() = agents[i].vect().normalized();
     }
@@ -60,13 +59,29 @@ int main(int argc, char const *argv[]) {
         return 0;
     }
 
-    int n_agents, n_generations, board_x, board_y, move_divider;
-    float max_speed;
+    if(argc < 3){
+        cout << "signature is: --testType n_agents <--debug>\n";
+        return 1;   
+    }
+
+    if(argc == 4 and strcmp(argv[3], "--debug") == 0)
+        set_debug();
+
     float agent_radius;
-    cin >> n_agents >> n_generations >> agent_radius >> board_x >> board_y >> max_speed >> move_divider;
+    float max_speed;
+    int n_agents, n_generations, board_x, board_y, move_divider;
+    cin >> n_generations >> agent_radius >> board_x >> board_y >> max_speed >> move_divider;
+    n_agents = atoi(argv[2]);
 
     auto *agents = new agent[n_agents];
-    circle_scenario(n_agents, agents, board_x, board_y);
+    if(strcmp(argv[1], "--random") == 0)
+        random_scenario(n_agents, agents, board_x, board_y);
+    else if(strcmp(argv[1], "--circle") == 0)
+        circle_scenario(n_agents, agents, board_x, board_y);
+    else if(strcmp(argv[1], "--cross") == 0){
+        n_agents = 2;
+        cross_scenario(agents, board_x, board_y);
+    }
 
     run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, move_divider, agents);
     return 0;
