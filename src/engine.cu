@@ -30,6 +30,7 @@ constexpr float ALFA = M_PI;
 constexpr int RESOLUTION = 180;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
 constexpr int MAX_BOARDS = 10000;
+constexpr float COLLISION_RADIUS_MULT = 10;
 constexpr float ALFA_EPS = ALFA / RESOLUTION;
 constexpr int MULTIPLIER = 1000000000 / (10 * MAX_BOARDS);
 
@@ -41,13 +42,13 @@ __device__ vo compute_simple_vo(const agent &A, const agent &B, int agent_radius
     float theta = asin(2 * agent_radius / (pAB.length()));
     obs.left = pABn.rotate(theta);
     obs.right = pABn.rotate(-theta);
-//    if (obs.contains(A.pos())) {
-//        float x = distance(A.pos(), obs.apex);
-//        float beta = theta + asin((x * sin(theta)) / max_speed);
-//        obs.apex = obs.apex - B.svect();
-//        obs.left = pABn.rotate(beta);
-//        obs.right = pABn.rotate(-beta);
-//    }
+   if (obs.contains(A.pos())) {
+       float x = distance(A.pos(), obs.apex);
+       // float beta = theta + asin((x * sin(theta)) / max_speed);
+       // obs.apex = A.pos() + (pABn*max_speed*0.01);
+       // obs.left = pABn.rotate(beta);
+       // obs.right = pABn.rotate(-beta);
+   }
     return obs;
 }
 
@@ -76,7 +77,7 @@ __global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_rad
 
     agent &A = agents[i1];
     agent &B = agents[i2];
-    if (distance(A.pos(), B.pos()) < (2.5 * agent_radius))
+    if (distance(A.pos(), B.pos()) < (COLLISION_RADIUS_MULT * agent_radius))
         obstacles[ix] = compute_simple_vo(agents[i1], agents[i2], agent_radius, max_speed);
     else
         obstacles[ix].set_invalid();
@@ -191,7 +192,7 @@ void print_details(agent *agents, vo *obstacles, int n) {
     printf("\n");
 }
 
-void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, int move_divider, agent* agents) {
+void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, int move_divider, int fake_move_divider, agent* agents) {
     if (board_x > MAX_BOARDS || board_y > MAX_BOARDS)
         std::cout << "Exceeded MAX_BOARDS size. Bugs may occur\n";
 
@@ -219,21 +220,23 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     int grid_size_rays = rays_number / block_size + 1;
 
     for (int i = 0; i < n_generations; ++i) {
-        clear_best_distances<<<grid_size_rays, block_size>>>(d_best_distances, rays_number);
-        clear_vo<<<grid_size_pairs, block_size>>>(d_obstacles, n_agents);
-        gpuErrchk(cudaDeviceSynchronize());
-        find_path<<<grid_size_agents, block_size>>>(d_agents, n_agents, agent_radius, max_speed);
-        gpuErrchk(cudaDeviceSynchronize());
+        if(i % fake_move_divider == 0){
+            clear_best_distances<<<grid_size_rays, block_size>>>(d_best_distances, rays_number);
+            clear_vo<<<grid_size_pairs, block_size>>>(d_obstacles, n_agents);
+            gpuErrchk(cudaDeviceSynchronize());
+            find_path<<<grid_size_agents, block_size>>>(d_agents, n_agents, agent_radius, max_speed);
+            gpuErrchk(cudaDeviceSynchronize());
 
-        set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius, max_speed);
-        gpuErrchk(cudaDeviceSynchronize());
-        if (DEBUG_FLAG) gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));
+            set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius, max_speed);
+            gpuErrchk(cudaDeviceSynchronize());
+            if (DEBUG_FLAG) gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));
 
-        get_worst_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed);
-        gpuErrchk(cudaDeviceSynchronize());
+            get_worst_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed);
+            gpuErrchk(cudaDeviceSynchronize());
 
-        apply_best_velocities<<<grid_size_agents, block_size>>>(d_agents, d_best_distances, d_best_intersects, n_agents, max_speed);
-        gpuErrchk(cudaDeviceSynchronize());
+            apply_best_velocities<<<grid_size_agents, block_size>>>(d_agents, d_best_distances, d_best_intersects, n_agents, max_speed);
+            gpuErrchk(cudaDeviceSynchronize());
+        }
 
         if (DEBUG_FLAG) print_details(agents, h_obstacles, n_agents);
         move<<<grid_size_pairs, block_size>>>(d_agents, n_agents, move_divider);
