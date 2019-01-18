@@ -1,2 +1,2 @@
-2500 10 1000 1000 1 1 1 
+2500 10 1000 1000 40 40 1 
 // generations agent_radius boardx boardy max_speed move_divider fake_movement_divider

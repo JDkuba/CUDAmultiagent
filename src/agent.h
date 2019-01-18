@@ -32,7 +32,7 @@ public:
 
     HD inline float speed() const { return s; }
 
-    HD inline vec2 svect() const { return v.normalized() * s; }
+    HD inline vec2 svect() const { return v * s; }
 
     HD inline float dist() const { return distance(p, d); }
 

@@ -30,25 +30,29 @@ constexpr float ALFA = M_PI;
 constexpr int RESOLUTION = 180;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
 constexpr int MAX_BOARDS = 10000;
-constexpr float COLLISION_RADIUS_MULT = 10;
+constexpr float COLLISION_RADIUS_MULT = 5;
 constexpr float ALFA_EPS = ALFA / RESOLUTION;
 constexpr int MULTIPLIER = 1000000000 / (10 * MAX_BOARDS);
+
 
 __device__ vo compute_simple_vo(const agent &A, const agent &B, int agent_radius, float max_speed) {
     vo obs;
     vec2 pAB = B.pos() - A.pos();
     vec2 pABn = pAB.normalized();
-    obs.apex = A.pos() + B.svect();//+ (pABn * agent_radius);
-    float theta = asin(2 * agent_radius / (pAB.length()));
-    obs.left = pABn.rotate(theta);
-    obs.right = pABn.rotate(-theta);
-   if (obs.contains(A.pos())) {
-       float x = distance(A.pos(), obs.apex);
-       // float beta = theta + asin((x * sin(theta)) / max_speed);
-       // obs.apex = A.pos() + (pABn*max_speed*0.01);
-       // obs.left = pABn.rotate(beta);
-       // obs.right = pABn.rotate(-beta);
-   }
+    float R = 2.5f * agent_radius;      //todo
+
+    if (pAB.length() >  R) {
+        obs.apex = A.pos() + A.vect() * agent_radius + B.svect();
+        float theta = asin(R / (pAB.length()));
+        obs.left = pABn.rotate(theta);
+        obs.right = pABn.rotate(-theta);
+    } else {
+//        printf("%f\n", pAB.length());
+        obs.apex = (A.pos() + A.vect() * agent_radius + B.svect() - pABn * (R - pAB.length()));
+        obs.right.set(pABn.y(), -pABn.x());
+        obs.left = 0 - obs.right;
+    }
+
     return obs;
 }
 
@@ -97,7 +101,7 @@ __global__ void clear_best_distances(int *best_distances, int rays_number) {
 }
 
 __global__ void get_worst_intersects(agent *agents, vo *obstacles, int *best_distances,
-                                     unsigned long long *best_intersects, int n_agents, float max_speed) {
+                                     unsigned long long *best_intersects, int n_agents, float max_speed, int agent_radius) {
 
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
     int i1 = ix / n_agents;
@@ -118,13 +122,14 @@ __global__ void get_worst_intersects(agent *agents, vo *obstacles, int *best_dis
     vec2 p[2]; // points of intersection v_ray with angle
     float d[2]; // distance from p[i] to A.pos() - we need to get closest point
 
-
+    //todo
     for (int i = 0; i <= RESOLUTION; ++i) {
         ray v_ray(A.pos(), left_angle.rotate(-i * ALFA_EPS));
         for (int j = 0; j < 2; ++j) {
             p[j] = intersect_rays(rays[j], v_ray);
             if (p[j].invalid())
                 p[j] = v_ray.pos + (v_ray.dir * max_speed);
+            p[j] = (p[j] - A.pos()).normalized() * (distance(p[j], A.pos())-agent_radius/sin(angle(rays[j].dir, v_ray.dir))) + A.pos(); //todo
             d[j] = min(max_speed, distance(p[j], A.pos()));
             p[j] = v_ray.pos + (v_ray.dir * d[j]);
         }
@@ -152,7 +157,8 @@ __global__ void apply_best_velocities(agent *agents, int *best_distances, unsign
         return;
 
     agent &A = agents[ai];
-    int best_dist = INT32_MAX;
+    float best_dist = 0;
+    bool assigned = false;
     vec2 best_p, p;
     for (int i = 0; i <= RESOLUTION; ++i) {
         if (best_distances[RESOLUTION_SHIFT * ai + i] == INT32_MAX) { // ray is free
@@ -163,9 +169,10 @@ __global__ void apply_best_velocities(agent *agents, int *best_distances, unsign
             p.set(*ptr, *(ptr + 1));
         }
         float dist = distance(p, A.dest());
-        if (dist < best_dist) {
+        if (!assigned || dist < best_dist) {
             best_dist = dist;
             best_p = p;
+            assigned = true;
         }
     }
 
@@ -195,7 +202,7 @@ void print_details(agent *agents, vo *obstacles, int n) {
 void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, int move_divider, int fake_move_divider, agent* agents) {
     if (board_x > MAX_BOARDS || board_y > MAX_BOARDS)
         std::cout << "Exceeded MAX_BOARDS size. Bugs may occur\n";
-
+//    cudaSetDevice(2);
     openFiles();
     putMetadataToFile(n_agents, n_generations, agent_radius, board_x, board_y);
     writeAgenstStartPosition(agents, n_agents);
@@ -231,7 +238,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
             gpuErrchk(cudaDeviceSynchronize());
             if (DEBUG_FLAG) gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));
 
-            get_worst_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed);
+            get_worst_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed, agent_radius);
             gpuErrchk(cudaDeviceSynchronize());
 
             apply_best_velocities<<<grid_size_agents, block_size>>>(d_agents, d_best_distances, d_best_intersects, n_agents, max_speed);
