@@ -30,7 +30,7 @@ constexpr float ALFA = M_PI;
 constexpr int RESOLUTION = 180;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
 constexpr int MAX_BOARDS = 10000;
-constexpr float COLLISION_RADIUS_MULT = 5;
+constexpr float COLLISION_RADIUS_MULT = 10;
 constexpr float ALFA_EPS = ALFA / RESOLUTION;
 constexpr int MULTIPLIER = 1000000000 / (10 * MAX_BOARDS);
 
@@ -39,19 +39,12 @@ __device__ vo compute_simple_vo(const agent &A, const agent &B, int agent_radius
     vo obs;
     vec2 pAB = B.pos() - A.pos();
     vec2 pABn = pAB.normalized();
-    float R = 2.5f * agent_radius;      //todo
+    float R = 2.0f * agent_radius;
 
-    if (pAB.length() >  R) {
-        obs.apex = A.pos() + A.vect() * agent_radius + B.svect();
-        float theta = asin(R / (pAB.length()));
-        obs.left = pABn.rotate(theta);
-        obs.right = pABn.rotate(-theta);
-    } else {
-//        printf("%f\n", pAB.length());
-        obs.apex = (A.pos() + A.vect() * agent_radius + B.svect() - pABn * (R - pAB.length()));
-        obs.right.set(pABn.y(), -pABn.x());
-        obs.left = 0 - obs.right;
-    }
+    float theta = asin(R / (pAB.length()));
+    obs.apex = B.pos() + B.svect();
+    obs.left = pABn.rotate(theta);
+    obs.right = pABn.rotate(-theta);
 
     return obs;
 }
@@ -122,15 +115,19 @@ __global__ void get_worst_intersects(agent *agents, vo *obstacles, int *best_dis
     vec2 p[2]; // points of intersection v_ray with angle
     float d[2]; // distance from p[i] to A.pos() - we need to get closest point
 
-    //todo
+//    if (obs.contains(A.pos())) printf("ERROR!\n");
     for (int i = 0; i <= RESOLUTION; ++i) {
         ray v_ray(A.pos(), left_angle.rotate(-i * ALFA_EPS));
         for (int j = 0; j < 2; ++j) {
-            p[j] = intersect_rays(rays[j], v_ray);
-            if (p[j].invalid())
-                p[j] = v_ray.pos + (v_ray.dir * max_speed);
-            p[j] = (p[j] - A.pos()).normalized() * (distance(p[j], A.pos())-agent_radius/sin(angle(rays[j].dir, v_ray.dir))) + A.pos(); //todo
-            d[j] = min(max_speed, distance(p[j], A.pos()));
+            if (p[j].invalid()) {
+                p[j] = v_ray.pos + (v_ray.dir * (max_speed - agent_radius));
+            }
+            else{
+                p[j] = intersect_rays(rays[j], v_ray);
+                p[j] = (p[j] - A.pos()).normalized() * (distance(p[j], A.pos())-agent_radius/sin(angle(rays[j].dir, v_ray.dir))) + A.pos(); //todo
+            }
+//            printf("%f, %f", distance(p[j], A.pos()), p[j]);
+            d[j] = max(0.0f,min(max_speed, distance(p[j], A.pos())));
             p[j] = v_ray.pos + (v_ray.dir * d[j]);
         }
 
@@ -190,13 +187,19 @@ __global__ void move(agent *agents, int n_agents, int move_divider) {
 }
 
 void print_details(agent *agents, vo *obstacles, int n) {
+    bool ifprint = false;
     for (int i = 0; i < n; ++i) {
-        agents[i].print(i);
         for (int j = 0; j < n; ++j) {
-            if (i != j && !obstacles[i * n + j].invalid()) obstacles[i * n + j].print(i, j);
+            if (i != j && !obstacles[i * n + j].invalid()) {
+                obstacles[i * n + j].print(i, j);
+                ifprint = true;
+            }
         }
     }
-    printf("\n");
+    if (ifprint) {
+        for (int i = 0; i < n; ++i) agents[i].print(i);
+        printf("\n");
+    }
 }
 
 void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, int move_divider, int fake_move_divider, agent* agents) {
