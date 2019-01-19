@@ -42,7 +42,7 @@ __device__ vo compute_simple_vo(const agent &A, const agent &B, int agent_radius
     float R = 2.0f * agent_radius;
 
     float theta = asin(R / (pAB.length()));
-    obs.apex = B.pos() + B.svect();
+    obs.apex = A.pos() + B.svect();
     obs.left = pABn.rotate(theta);
     obs.right = pABn.rotate(-theta);
 
@@ -56,13 +56,10 @@ __global__ void find_path(agent *agents, int n_agents, float agent_radius, float
 
     agent &james = agents[ix];
     james.set_vector((james.dest() - james.pos()).normalized());
-    if (james.finished(agent_radius) or james.isdead()) {
+    if (james.finished(agent_radius))
         james.set_speed(0);
-        james.killme();
-    }
-    else {
+    else
         james.set_speed(max_speed);
-    }
 }
 
 __global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_radius, float max_speed) {
@@ -82,6 +79,7 @@ __global__ void set_vo(agent *agents, vo *obstacles, int n_agents, int agent_rad
 
 __global__ void clear_vo(vo *obstacles, int n_agents) {
     int ix = blockDim.x * blockIdx.x + threadIdx.x;
+    if (ix >= n_agents * n_agents) return;
     obstacles[ix].set_invalid();
 }
 
@@ -117,17 +115,13 @@ __global__ void get_worst_intersects(agent *agents, vo *obstacles, int *best_dis
 
 //    if (obs.contains(A.pos())) printf("ERROR!\n");
     for (int i = 0; i <= RESOLUTION; ++i) {
-        ray v_ray(A.pos(), left_angle.rotate(-i * ALFA_EPS));
+        ray v_ray(A.pos(), left_angle.rotate(-i * ALFA_EPS).normalized());
         for (int j = 0; j < 2; ++j) {
+            p[j] = intersect_rays(rays[j], v_ray);
             if (p[j].invalid()) {
-                p[j] = v_ray.pos + (v_ray.dir * (max_speed - agent_radius));
+                p[j] = v_ray.pos + (v_ray.dir * max_speed);
             }
-            else{
-                p[j] = intersect_rays(rays[j], v_ray);
-                p[j] = (p[j] - A.pos()).normalized() * (distance(p[j], A.pos())-agent_radius/sin(angle(rays[j].dir, v_ray.dir))) + A.pos(); //todo
-            }
-//            printf("%f, %f", distance(p[j], A.pos()), p[j]);
-            d[j] = max(0.0f,min(max_speed, distance(p[j], A.pos())));
+            d[j] = min(max_speed, distance(p[j], A.pos()));
             p[j] = v_ray.pos + (v_ray.dir * d[j]);
         }
 
@@ -159,7 +153,7 @@ __global__ void apply_best_velocities(agent *agents, int *best_distances, unsign
     vec2 best_p, p;
     for (int i = 0; i <= RESOLUTION; ++i) {
         if (best_distances[RESOLUTION_SHIFT * ai + i] == INT32_MAX) { // ray is free
-            vec2 v = A.vect().rotate(ALFA / 2).rotate(-i * ALFA_EPS);
+            vec2 v = A.vect().rotate(ALFA / 2).rotate(-i * ALFA_EPS).normalized();
             p = A.pos() + (v * max_speed);
         } else {
             float *ptr = reinterpret_cast<float *>(&intersects[RESOLUTION_SHIFT * ai + i]);
