@@ -26,12 +26,17 @@ public:
 
     HD inline float y() const { return y_v; }
 
-    HD inline float isZero() const {
+    HD inline float is_zero() const {
         return isFloatZero(x_v) and isFloatZero(y_v);
     }
 
-    HD inline bool invalid() const {
+    HD inline bool is_invalid() const {
         return isnan(x_v) or isnan(y_v);
+    }
+
+    HD inline void set_invalid() {
+        x_v = nanf("1");
+        y_v = nanf("1");
     }
 
     HD vec2() {}
@@ -59,7 +64,8 @@ public:
 
     HD inline vec2 normalized() const {
         float len = length();
-        if (len == 0) return rep(0);
+        if (isFloatZero(len))
+            return rep(0);
         return {x_v / len, y_v / len};
     }
 
@@ -156,7 +162,7 @@ struct vo {
     }
 
     HD inline bool invalid() {
-        return apex.invalid();
+        return apex.is_invalid();
     }
 
     HD inline ray left_ray() {
@@ -167,9 +173,9 @@ struct vo {
         return ray(apex, right);
     }
 
-    HD inline bool contains(vec2 p) {
+    HD inline bool contains(vec2 p, float epsilon) {
         vec2 vect = p - apex;
-        return angle(right, vect) >= 0 and angle(left, vect) <= 0;
+        return angle(right, vect) >= epsilon and angle(left, vect) <= -epsilon;
     }
 
     HD void print(int i, int j) {
@@ -180,7 +186,7 @@ struct vo {
 
 
 HD inline bool are_parallel(const ray &r1, const ray &r2) {
-    return (r1.dir - r2.dir).isZero() or (r1.dir + r2.dir).isZero();
+    return (r1.dir - r2.dir).is_zero() or (r1.dir + r2.dir).is_zero();
 }
 
 HD inline vec2 intersect_rays(const ray &r1, const ray &r2) {
@@ -197,7 +203,7 @@ HD inline vec2 intersect_rays(const ray &r1, const ray &r2) {
     vec2 dir1 = (intersec - r1.pos).normalized();
     vec2 dir2 = (intersec - r2.pos).normalized();
 
-    if ((r1.dir + dir1).isZero() or (r2.dir + dir2).isZero())
+    if ((r1.dir + dir1).is_zero() or (r2.dir + dir2).is_zero())
         return vec2(nanf("1"), nanf("1"));
 
     return intersec;
