@@ -44,7 +44,6 @@ __device__ vo compute_simple_vo(const agent &A, const agent &B, int agent_radius
 
     float theta = asin(R / (pAB.length()));
     obs.apex = A.pos() + B.svect();
-//    
     if((obs.apex - A.pos()).is_zero()){
         obs.apex = (0-pABn)*APEX_SHIFT;
     }
@@ -120,21 +119,26 @@ __global__ void get_intersects(agent *agents, vo *obstacles, int *best_distances
     vec2 p[2]; // points of intersection v_ray with angle
     float d[2]; // distance from p[i] to A.pos() - we need to get closest point
 
-//    if (obs.contains(A.pos())) printf("ERROR!\n");
     for (int i = 0; i <= RESOLUTION; ++i) {
         ray v_ray(A.pos(), left_angle.rotate(-i * ALFA_EPS).normalized());
-        for (int j = 0; j < 2; ++j) {
-            p[j] = intersect_rays(rays[j], v_ray);
-            if (p[j].is_invalid()) {
-                p[j] = v_ray.pos + (v_ray.dir * max_speed);
-            }
-            d[j] = min(max_speed, distance(p[j], A.pos()));
-            p[j] = v_ray.pos + (v_ray.dir * d[j]);
+        if (obs.contains(A.pos(), 0)){
+            p[0] = v_ray.pos + (v_ray.dir * max_speed);
+            d[0] = max_speed;
         }
+        else{
+            for (int j = 0; j < 2; ++j) {
+                p[j] = intersect_rays(rays[j], v_ray);
+                if (p[j].is_invalid()) {
+                    p[j] = v_ray.pos + (v_ray.dir * max_speed);
+                }
+                d[j] = min(max_speed, distance(p[j], A.pos()));
+                p[j] = v_ray.pos + (v_ray.dir * d[j]);
+            }
 
-        if (d[1] < d[0]) {
-            p[0] = p[1];
-            d[0] = d[1];
+            if (d[1] < d[0]) {
+                p[0] = p[1];
+                d[0] = d[1];
+            }
         }
 
         unsigned long long point;
