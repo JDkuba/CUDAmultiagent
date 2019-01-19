@@ -34,6 +34,7 @@ constexpr float COLLISION_RADIUS_MULT = 10;
 constexpr float ALFA_EPS = ALFA / RESOLUTION;
 constexpr int MULTIPLIER = 1000000000 / (10 * MAX_BOARDS);
 constexpr float APEX_SHIFT = 0.1;
+constexpr float CONTAINS_EPS = 0.01;
 
 __device__ vo compute_simple_vo(const agent &A, const agent &B, int agent_radius, float max_speed) {
     vo obs;
@@ -43,7 +44,8 @@ __device__ vo compute_simple_vo(const agent &A, const agent &B, int agent_radius
 
     float theta = asin(R / (pAB.length()));
     obs.apex = A.pos() + B.svect();
-    if((obs.apex-A.pos()).isZero()){
+//    
+    if((obs.apex - A.pos()).is_zero()){
         obs.apex = (0-pABn)*APEX_SHIFT;
     }
     obs.left = pABn.rotate(theta);
@@ -123,7 +125,7 @@ __global__ void get_intersects(agent *agents, vo *obstacles, int *best_distances
         ray v_ray(A.pos(), left_angle.rotate(-i * ALFA_EPS).normalized());
         for (int j = 0; j < 2; ++j) {
             p[j] = intersect_rays(rays[j], v_ray);
-            if (p[j].invalid()) {
+            if (p[j].is_invalid()) {
                 p[j] = v_ray.pos + (v_ray.dir * max_speed);
             }
             d[j] = min(max_speed, distance(p[j], A.pos()));
@@ -146,8 +148,30 @@ __global__ void get_intersects(agent *agents, vo *obstacles, int *best_distances
     }
 }
 
-__global__ void check_intersects(agent *agents, vo *obstacles, int *best_distances,
-                                     unsigned long long *best_intersects, int n_agents, float max_speed, int agent_radius) { }
+__global__ void check_intersects(vo *obstacles, unsigned long long *intersects, int n_agents) {
+    int ix = blockDim.x * blockIdx.x + threadIdx.x;
+    int i1 = ix / n_agents;
+    int i2 = ix % n_agents;
+
+    if (ix >= n_agents * n_agents || i1 == i2 || obstacles[ix].invalid())
+        return;
+
+    vo &obs = obstacles[ix];
+
+    for (int i = 0; i <= RESOLUTION; ++i) {
+        float *ptr = reinterpret_cast<float *>(&intersects[RESOLUTION_SHIFT * i1 + i]);
+        vec2 p(*ptr, *(ptr+1));
+        if (obs.contains(p, CONTAINS_EPS)) {
+//            if (i1 == 0) printf("(%f, %f)\n", p.x(), p.y());
+            p.set_invalid();
+            unsigned long long point;
+            ptr = reinterpret_cast<float *>(&point);
+            *ptr = p.x();
+            *(ptr + 1) = p.y();
+            atomicExch(&intersects[RESOLUTION_SHIFT * i1 + i], point);
+        }
+    }
+}
 
 __global__ void apply_best_velocities(agent *agents, int *best_distances, unsigned long long *intersects, int n_agents, float max_speed){
     int ai = blockDim.x * blockIdx.x + threadIdx.x;
@@ -155,9 +179,9 @@ __global__ void apply_best_velocities(agent *agents, int *best_distances, unsign
         return;
 
     agent &A = agents[ai];
-    float best_dist = 0;
-    bool assigned = false;
-    vec2 best_p, p;
+    float best_dist = INT32_MAX;
+    vec2 best_p(A.pos().x(), A.pos().y());
+    vec2 p;
     for (int i = 0; i <= RESOLUTION; ++i) {
         if (best_distances[RESOLUTION_SHIFT * ai + i] == INT32_MAX) { // ray is free
             vec2 v = A.vect().rotate(ALFA / 2).rotate(-i * ALFA_EPS).normalized();
@@ -166,11 +190,12 @@ __global__ void apply_best_velocities(agent *agents, int *best_distances, unsign
             float *ptr = reinterpret_cast<float *>(&intersects[RESOLUTION_SHIFT * ai + i]);
             p.set(*ptr, *(ptr + 1));
         }
+        if(p.is_invalid())
+            continue;
         float dist = distance(p, A.dest());
-        if (!assigned || dist < best_dist) {
+        if (dist < best_dist) {
             best_dist = dist;
             best_p = p;
-            assigned = true;
         }
     }
 
@@ -188,7 +213,7 @@ __global__ void move(agent *agents, int n_agents, int move_divider) {
 }
 
 void print_details(agent *agents, vo *obstacles, int n) {
-    bool ifprint = false;
+    bool ifprint = true;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
             if (i != j && !obstacles[i * n + j].invalid()) {
@@ -245,7 +270,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
             get_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed, agent_radius);
             gpuErrchk(cudaDeviceSynchronize());
 
-            check_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed, agent_radius);
+            check_intersects<<<grid_size_pairs, block_size>>>(d_obstacles, d_best_intersects, n_agents);
             gpuErrchk(cudaDeviceSynchronize());
 
             apply_best_velocities<<<grid_size_agents, block_size>>>(d_agents, d_best_distances, d_best_intersects, n_agents, max_speed);
