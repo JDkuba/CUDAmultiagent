@@ -7,6 +7,9 @@
 #include "IOUtils.h"
 #include <stdint.h>
 #include <iostream>
+#include <curand.h>
+#include <curand_kernel.h>
+#include <cuda.h>
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 
@@ -27,6 +30,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 }
 
 constexpr float ALFA = M_PI;
+constexpr int RANDOM_VECTORS_NUM = 1000;
 constexpr int RESOLUTION = 180;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
 constexpr int MAX_BOARDS = 10000;
@@ -95,6 +99,24 @@ __global__ void clear_best_distances(int *best_distances, int rays_number) {
         return;
 
     best_distances[i] = INT32_MAX;
+}
+
+
+__global__ void randomize_vectors(vec2* vectors, agent* agents, curandState* states, int n_agents, float max_speed) {
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int i1 = idx / n_agents;
+    int i2 = idx % n_agents;
+    float rand_angle, rand_distance;
+    curand_init(1234, 2*idx, 0, states+2*idx);
+    rand_angle = curand_uniform(states+2*idx);
+    curand_init(1234, 2*idx+1, 0, states+2*idx+1);
+    rand_distance = curand_uniform(states+2*idx+1);
+
+    agent &A = agents[i1];
+    vec2 vector = A.vect().rotate((ALFA / 2) * (0.5f - rand_angle));
+    vector.normalized();
+    vector = vector * (max_speed * rand_distance);
+    vectors[idx] = vector;
 }
 
 __global__ void get_intersects(agent *agents, vo *obstacles, int *best_distances,
@@ -247,10 +269,17 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     vo *h_obstacles = new vo[n_agents * n_agents];      //to remove
     int *d_best_distances;
     unsigned long long *d_best_intersects;
+
+    vec2* d_random_vectors;
+    curandState *d_states;
+
     gpuErrchk(cudaMalloc(&d_agents, n_agents * sizeof(agent)));
     gpuErrchk(cudaMalloc(&d_obstacles, n_agents * n_agents * sizeof(vo)));
     gpuErrchk(cudaMalloc(&d_best_distances, rays_number * sizeof(int)));
     gpuErrchk(cudaMalloc(&d_best_intersects, rays_number * sizeof(long long)));
+
+    gpuErrchk(cudaMalloc(&d_random_vectors, n_agents * RANDOM_VECTORS_NUM * sizeof(vec2)));
+    gpuErrchk(cudaMalloc(&d_states, 2 * n_agents * RANDOM_VECTORS_NUM * sizeof(curandState)));
 
     gpuErrchk(cudaMemcpy(d_agents, agents, n_agents * sizeof(agent), cudaMemcpyHostToDevice));
 
@@ -270,6 +299,9 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
             set_vo<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, n_agents, agent_radius, max_speed);
             gpuErrchk(cudaDeviceSynchronize());
             if (DEBUG_FLAG) gpuErrchk(cudaMemcpy(h_obstacles, d_obstacles, n_agents * n_agents * sizeof(vo), cudaMemcpyDeviceToHost));
+
+            randomize_vectors<<<grid_size_agents, block_size>>>(d_random_vectors, d_agents, d_states, n_agents, max_speed);
+            gpuErrchk(cudaDeviceSynchronize());
 
             get_intersects<<<grid_size_pairs, block_size>>>(d_agents, d_obstacles, d_best_distances, d_best_intersects, n_agents, max_speed, agent_radius);
             gpuErrchk(cudaDeviceSynchronize());

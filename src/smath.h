@@ -88,8 +88,12 @@ public:
     HD vec2 operator/(const vec2 &c) const {
         return {x() / c.x(), y() / c.y()};
     }
-};
 
+    HD void operator=(const vec2 &c) {
+        x_v = c.x_v;
+        y_v = c.y_v;
+    }
+};
 
 HD inline vec2 operator*(float scalar, const vec2 &b) { return vec2::rep(scalar) * b; }
 
