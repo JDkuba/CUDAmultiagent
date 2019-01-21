@@ -47,19 +47,9 @@ public class Controller {
                 plane.stopAgentSimulation();
                 plane.setAgentsPositions(startingPositions);
             }
-        });
 
-        plane.setOnMouseClicked(event -> {
-            if (event.getButton().compareTo(MouseButton.SECONDARY) == 0) {
-                plane.stopAgentSimulation();
-            }
-            if (event.getButton().compareTo(MouseButton.PRIMARY) == 0) {
-                plane.playAgentSimulation();
-            }
-            if (event.getButton().compareTo(MouseButton.MIDDLE) == 0) {
-                plane.playAgentSimulationFromStart();
-                plane.stopAgentSimulation();
-                plane.setAgentsPositions(startingPositions);
+            if (keyEvent.getCode().compareTo(KeyCode.SPACE) == 0) {
+                plane.changeAgentSimulationPlayStatus();
             }
         });
     }
