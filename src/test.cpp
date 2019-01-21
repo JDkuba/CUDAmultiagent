@@ -38,19 +38,20 @@ int main(int argc, char const *argv[]) {
     if(argc == 4 and strcmp(argv[3], "--debug") == 0)
         set_debug();
 
-    float agent_radius, max_speed;
+    int agent_radius;
+    float max_speed;
     int n_agents, n_generations, board_x, board_y, move_divider, fake_move_divider;
     cin >> n_generations >> agent_radius >> board_x >> board_y >> max_speed >> move_divider >> fake_move_divider;
     n_agents = atoi(argv[2]);
 
     auto *agents = new agent[n_agents];
     if(strcmp(argv[1], "--random") == 0)
-        random_scenario(n_agents, agents, board_x, board_y);
+        uniform(n_agents, agents, board_x, board_y, agent_radius);
     else if(strcmp(argv[1], "--circle") == 0)
-        circle_scenario(n_agents, agents, board_x, board_y);
+        circle(n_agents, agents, board_x, board_y);
     else if(strcmp(argv[1], "--cross") == 0){
         n_agents = 2;
-        cross_scenario(agents, board_x, board_y);
+        simple_cross(agents, board_x, board_y);
     }
 
     run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, move_divider, fake_move_divider, agents);

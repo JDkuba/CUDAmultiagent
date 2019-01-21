@@ -4,8 +4,8 @@
 
 #include "agent.h"
 
-void circle_scenario(int n_agents, agent *agents, int board_x, int board_y);
-void random_scenario(int n_agents, agent *agents, int board_x, int board_y);
-void cross_scenario(agent *agents, int board_x, int board_y);
+void circle(int n_agents, agent *agents, int board_x, int board_y);
+void uniform(int n_agents, agent *agents, int board_x, int board_y, int agent_radius);
+void simple_cross(agent *agents, int board_x, int board_y);
 
 #endif
