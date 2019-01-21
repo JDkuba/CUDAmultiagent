@@ -5,16 +5,18 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import utility.Position;
+import view.drawable.MovablePane;
 
 import java.util.List;
 
-public abstract class AbstractPlane extends Pane {
+public abstract class AbstractPlane extends MovablePane {
     public abstract void addAgents(List<Position> positions);
     public abstract void setAgentsPositions(List<Position> positions);
     public abstract void addAgentsPathTranslation(List<List<Position>> agentMovements);
     public abstract void stopAgentSimulation();
     public abstract void playAgentSimulation();
     public abstract void playAgentSimulationFromStart();
+    public abstract void changeAgentSimulationPlayStatus();
     public abstract void setAgentsRadius(double radius);
     public abstract void setAgentsRadii(List<Double> radii);
     public abstract void setAgentsColor(Color color);
