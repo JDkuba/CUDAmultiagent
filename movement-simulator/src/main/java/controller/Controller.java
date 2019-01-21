@@ -3,6 +3,7 @@ package controller;
 import abstractClasses.AbstractPlane;
 import cudaUtils.CudaSceneDataBox;
 import cudaUtils.CudaSceneMetadata;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -39,17 +40,16 @@ public class Controller {
         }
         addAnimationInPackages(20, positionsLists, plane);
 
-        plane.setOnMouseClicked(event -> {
-            if (event.getButton().compareTo(MouseButton.SECONDARY) == 0) {
-                plane.stopAgentSimulation();
-            }
-            if (event.getButton().compareTo(MouseButton.PRIMARY) == 0) {
-                plane.playAgentSimulation();
-            }
-            if (event.getButton().compareTo(MouseButton.MIDDLE) == 0) {
+        plane.setFocusTraversable(true);
+        plane.setOnKeyReleased(keyEvent -> {
+            if (keyEvent.getCode().compareTo(KeyCode.R) == 0) {
                 plane.playAgentSimulationFromStart();
                 plane.stopAgentSimulation();
                 plane.setAgentsPositions(startingPositions);
+            }
+
+            if (keyEvent.getCode().compareTo(KeyCode.SPACE) == 0) {
+                plane.changeAgentSimulationPlayStatus();
             }
         });
     }

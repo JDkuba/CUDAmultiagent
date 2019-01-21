@@ -7,6 +7,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import utility.Position;
 import view.drawable.Agent;
+import view.drawable.MovablePane;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -123,6 +124,15 @@ class Plane extends AbstractPlane {
         transitions[0].stop();
         initializeCurrentTransition();
         transitions[0].playFromStart();
+    }
+
+    @Override
+    public void changeAgentSimulationPlayStatus() {
+        if (transitions[0].getStatus().compareTo(Animation.Status.RUNNING) == 0) {
+            transitions[0].stop();
+        } else {
+            transitions[0].play();
+        }
     }
 
     private void initializeCurrentTransition() {
