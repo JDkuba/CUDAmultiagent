@@ -73,7 +73,7 @@ void cross(int n_agents, agent *agents, int board_x, int board_y, int agent_radi
     bool fit;
     vec2 prop;
     uniform_real_distribution<float> dist_x(10 + agent_radius, board_x * 1.0f / 3.0f);
-    uniform_real_distribution<float> dist_y(-15.0f * agent_radius, 15.0f * agent_radius);
+    uniform_real_distribution<float> dist_y(-agent_radius * n_agents / 10.0f, agent_radius * n_agents / 10.0f);
     int i = n_agents;
     while (i >= 0) {
         float tmp = dist_x(gen);
@@ -95,11 +95,11 @@ void cross(int n_agents, agent *agents, int board_x, int board_y, int agent_radi
         if (fit) {
             start_pos.push_back(prop);
             if (i % 2)
-                dest_pos.push_back(prop + vec2(board_x * 2.0f / 3.0f - (10 + agent_radius),
-                        board_x * 2.0f / 3.0f - 2 * (10 + agent_radius)));
+                dest_pos.push_back(prop + vec2(board_x * 3.0f / 5.0f - (10 + agent_radius),
+                                               board_x * 3.0f / 5.0f - 2 * (10 + agent_radius)));
             else
-                dest_pos.push_back(prop + vec2(board_x * 2.0f / 3.0f - (10 + agent_radius),
-                        -board_x * 2.0f / 3.0f + 2 * (10 + agent_radius)));
+                dest_pos.push_back(prop + vec2(board_x * 3.0f / 5.0f - (10 + agent_radius),
+                                               -board_x * 3.0f / 5.0f + 2 * (10 + agent_radius)));
         }
         --i;
     }

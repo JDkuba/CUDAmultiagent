@@ -56,6 +56,8 @@ int main(int argc, char const *argv[]) {
         simple_cross(agents, board_x, board_y);
     }
 
+    printf("STARTING POSITIONS GENERATED\n");
+    fflush(stdout);
     run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, move_divider, fake_move_divider, agents);
     return 0;
 }
