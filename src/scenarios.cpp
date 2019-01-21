@@ -1,5 +1,6 @@
 #include "scenarios.h"
 #include <random>
+#include <iostream>
 
 using namespace std;
 
@@ -64,4 +65,45 @@ void uniform(int n_agents, agent *agents, int board_x, int board_y, int agent_ra
 void simple_cross(agent *agents, int board_x, int board_y) {
     agents[0].set_agent(100, 100, board_x - 100, board_y - 100);
     agents[1].set_agent(99, board_y - 99, board_x - 99, 99);
+}
+
+void cross(int n_agents, agent *agents, int board_x, int board_y, int agent_radius) {
+    vector<vec2> start_pos;
+    vector<vec2> dest_pos;
+    bool fit;
+    vec2 prop;
+    uniform_real_distribution<float> dist_x(10 + agent_radius, board_x * 1.0f / 3.0f);
+    uniform_real_distribution<float> dist_y(-15.0f * agent_radius, 15.0f * agent_radius);
+    int i = n_agents;
+    while (i >= 0) {
+        float tmp = dist_x(gen);
+        fit = true;
+        if (i % 2) {
+            prop = vec2(tmp, tmp + dist_y(gen));
+        } else {
+            prop = vec2(tmp, board_y - (tmp + dist_y(gen)));
+        }
+        if (prop.y() < agent_radius || prop.y() > board_y - agent_radius)
+            continue;
+        for (const auto &p: start_pos) {
+            if (distance(p, prop) < 4.0f * agent_radius) {
+                ++i;
+                fit = false;
+                break;
+            }
+        }
+        if (fit) {
+            start_pos.push_back(prop);
+            if (i % 2)
+                dest_pos.push_back(prop + vec2(board_x * 2.0f / 3.0f - (10 + agent_radius),
+                        board_x * 2.0f / 3.0f - 2 * (10 + agent_radius)));
+            else
+                dest_pos.push_back(prop + vec2(board_x * 2.0f / 3.0f - (10 + agent_radius),
+                        -board_x * 2.0f / 3.0f + 2 * (10 + agent_radius)));
+        }
+        --i;
+    }
+    for (i = 0; i < n_agents; ++i) {
+        agents[i].set_agent(start_pos[i], dest_pos[i]);
+    }
 }
