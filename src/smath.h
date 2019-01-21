@@ -115,6 +115,10 @@ HD inline float distance(const vec2 &a, const vec2 &b) {
     return sqrt((a.x() - b.x()) * (a.x() - b.x()) + (a.y() - b.y()) * (a.y() - b.y()));
 }
 
+HD inline float distance_without_sqrt(const vec2 &a, const vec2 &b) {
+    return (a.x() - b.x()) * (a.x() - b.x()) + (a.y() - b.y()) * (a.y() - b.y());
+}
+
 HD inline float det(const vec2 &a, const vec2 &b) {
     return a.x() * b.y() - a.y() * b.x();
 }
