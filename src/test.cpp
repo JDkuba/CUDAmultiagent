@@ -1,18 +1,13 @@
 #include "agent.h"
 #include "engine.h"
 #include "smath.h"
+#include "scenarios.h"
 #include <stdio.h>
 #include <iostream>
 #include <string.h>
 #include <assert.h>
 
 using namespace std;
-
-float rand_float(float min, float max) {
-    if (max == min) return max;
-    if (max < min) return ((((float) rand()) / (float) RAND_MAX) * (min - max)) + max;
-    return ((((float) rand()) / (float) RAND_MAX) * (max - min)) + min;
-}
 
 static void testRayIntersect();
 
@@ -26,32 +21,6 @@ static void test() {
     testVects();
 }
 
-void circle_scenario(int n_agents, agent *agents, int board_x, int board_y) {
-    vec2 v, op;
-    float angle = 2.0f * 3.141f / n_agents;
-    v.set(0, (board_y - 50) / 2.0f);
-    op.set(0, -(board_y - 50) / 2.0f);
-    for (int i = 0; i < n_agents; ++i) {
-        vec2 tmp = vec2(rand_float(-25.0f, 25.0f), rand_float(-25.0f, 25.0f));
-        agents[i].set_agent(v + vec2(board_x / 2.0f, board_y / 2.0f) + tmp,
-                            op + vec2(board_x / 2.0f, board_y / 2.0f) - tmp);
-        v = v.rotate(angle);
-        op = op.rotate(angle);
-    }
-}
-
-void random_scenario(int n_agents, agent *agents, int board_x, int board_y) {
-    for (int i = 0; i < n_agents; ++i) {
-        agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x), rand_float(0, board_y));
-        agents[i].vect() = agents[i].vect().normalized();
-    }
-}
-
-//2 agents
-void cross_scenario(agent *agents, int board_x, int board_y) {
-    agents[0].set_agent(100, 100, board_x - 100, board_y - 100);
-    agents[1].set_agent(99, board_y - 99, board_x - 99, 99);
-}
 
 int main(int argc, char const *argv[]) {
     srand(time(NULL));
