@@ -29,17 +29,18 @@ static void test() {
 void circle_scenario(int n_agents, agent *agents, int board_x, int board_y) {
     vec2 v, op;
     float angle = 2.0f * 3.141f / n_agents;
-    v.set(0, (board_y - 50) / 2);
-    op.set(0, -(board_y - 50) / 2);
+    v.set(0, (board_y - 50) / 2.0f);
+    op.set(0, -(board_y - 50) / 2.0f);
     for (int i = 0; i < n_agents; ++i) {
-        agents[i].set_agent(v + vec2(board_x / 2, board_y / 2), op + vec2(board_x / 2, board_y / 2));
+        vec2 tmp = vec2(rand_float(-25.0f, 25.0f), rand_float(-25.0f, 25.0f));
+        agents[i].set_agent(v + vec2(board_x / 2.0f, board_y / 2.0f) + tmp,
+                            op + vec2(board_x / 2.0f, board_y / 2.0f) - tmp);
         v = v.rotate(angle);
         op = op.rotate(angle);
     }
 }
 
 void random_scenario(int n_agents, agent *agents, int board_x, int board_y) {
-    srand(time(NULL));
     for (int i = 0; i < n_agents; ++i) {
         agents[i].set_agent(rand_float(0, board_x), rand_float(0, board_y), rand_float(0, board_x), rand_float(0, board_y));
         agents[i].vect() = agents[i].vect().normalized();
@@ -53,6 +54,7 @@ void cross_scenario(agent *agents, int board_x, int board_y) {
 }
 
 int main(int argc, char const *argv[]) {
+    srand(time(NULL));
     if (argc > 1 and strcmp(argv[1], "--test") == 0) {
         cout << "testing...\n";
         test();
