@@ -10,7 +10,7 @@ import javafx.scene.layout.Pane;
 public class MovablePane extends Pane {
     private final double ZOOM_SCALE = 1.1;
     private final double MAX_SCALE = 10;
-    private final double MIN_SCALE = 0.3;
+    private final double MIN_SCALE = 0.1;
     private double orgMousePressedX;
     private double orgMousePressedY;
 
