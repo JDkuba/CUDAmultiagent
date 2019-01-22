@@ -32,15 +32,12 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-constexpr float ALFA = static_cast<const float>(M_PI);
-constexpr int RANDOM_VECTORS_NUM = 150;
+constexpr float ALFA = static_cast<float>(M_PI);
 constexpr int VECTOR_PACE_NUM = 20;
 constexpr int RESOLUTION = 50;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
 constexpr int MAX_BOARDS = 10000;
 constexpr float COLLISION_RADIUS_MULT = 25;
-constexpr float ALFA_EPS = ALFA / RESOLUTION;
-constexpr int MULTIPLIER = 1000000000 / (10 * MAX_BOARDS);
 constexpr float APEX_SHIFT = 0.1;
 constexpr float CONTAINS_EPS = 0.01;
 
@@ -128,7 +125,7 @@ __global__ void check_vectors(vo *obstacles, vec2 *vectors, int n_agents) {
 
     vec2 vector = vectors[agent_idx * blockDim.x + vector_idx];
     
-    __shared__ vo shared_obs[1024];
+    extern __shared__ vo shared_obs[];
     
     if (vector_idx < n_agents) {
         shared_obs[vector_idx] = obstacles[agent_idx * n_agents + vector_idx];
@@ -146,41 +143,41 @@ __global__ void check_vectors(vo *obstacles, vec2 *vectors, int n_agents) {
 
 __global__ void apply_best_velocities(agent *agents, vec2* vectors, int n_agents){
     int agent_idx = blockIdx.x;
-    int vector_idx = threadIdx.x;
-    if (agent_idx >= n_agents || vector_idx >= RESOLUTION_SHIFT * VECTOR_PACE_NUM)
-        return;
+    int vector_idx =  threadIdx.x;
 
-    __shared__ int best_dist;
-    __shared__ int best_vector_idx;
+    agent agent = agents[agent_idx];
 
-    if(vector_idx == 0){
-        best_dist = INT32_MAX;
-        best_vector_idx = INT32_MAX;
+    extern __shared__ std::pair<float, int> shared_distances[];
+    vec2 vector = vectors[agent_idx * blockDim.x + vector_idx];
+
+    if (vector.is_invalid()) {
+        shared_distances[vector_idx].first = INT32_MAX;
+    } else {
+        shared_distances[vector_idx].first = distance_without_sqrt(vector, agent.dest());
     }
 
-    vec2 current = vectors[VECTOR_PACE_NUM * RESOLUTION_SHIFT * agent_idx + vector_idx];
-
-    if(!current.is_invalid()){
-        int dist = distance_without_sqrt(current, agents[agent_idx].dest());
-        int old = atomicMin(&best_dist, dist);
-        if(dist < old)
-            atomicExch(&best_vector_idx, vector_idx);
-    }
+    shared_distances[vector_idx].second = vector_idx;
 
     __syncthreads();
 
-    if(vector_idx == 0){
-        if(best_vector_idx < INT32_MAX){
-            vec2 vec = vectors[VECTOR_PACE_NUM * RESOLUTION_SHIFT * agent_idx + best_vector_idx] - agents[agent_idx].pos();
-            agents[agent_idx].set_speed(vec.length());
-            agents[agent_idx].set_vector(vec.normalized());
+    for(int i = blockDim.x / 2; i >= 1; i /= 2) {
+        if(vector_idx < i) {
+            if(shared_distances[vector_idx].first > shared_distances[vector_idx + i].first) {
+                shared_distances[vector_idx].first = shared_distances[vector_idx + i].first;
+                shared_distances[vector_idx].second = shared_distances[vector_idx + i].second;
+            }
         }
-        else{
-            agents[agent_idx].set_speed(0);
-            agents[agent_idx].set_vector(vec2({0.0f, 0.0f}));
-        }
+        __syncthreads();
     }
 
+    if(vector_idx == 0) {
+        vec2 best(0.0f, 0.0f);
+        if (distance_without_sqrt(agent.pos(), agent.dest()) > shared_distances[0].first) {
+            best = vectors[agent_idx * blockDim.x + shared_distances[0].second] - agent.pos();
+        }
+        agents[agent_idx].set_speed(best.length());
+        agents[agent_idx].set_vector(best.normalized());
+    }
 }
 
 __global__ void move(agent *agents, int n_agents, int move_divider) {
@@ -217,12 +214,10 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     putMetadataToFile(n_agents, n_generations, agent_radius, board_x, board_y);
     writeAgenstStartPosition(agents, n_agents);
 
-    int rays_number = (n_agents * n_agents * RESOLUTION_SHIFT);
     int pairs_number = n_agents * n_agents;
     agent *d_agents;
     vo *d_obstacles;
     vo *h_obstacles = new vo[n_agents * n_agents];      //to remove
-    unsigned long long *d_best_intersects;
     vec2* d_vectors;
 
     gpuErrchk(cudaMalloc(&d_agents, n_agents * sizeof(agent)));
@@ -234,8 +229,6 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     int block_size = 1024;
     int grid_size_agents = n_agents / block_size + 1;
     int grid_size_pairs = pairs_number / block_size + 1;
-    int grid_size_rays = rays_number / block_size + 1;
-
 
     auto stop = std::chrono::steady_clock::now();
     std::cerr << "  Preparation time: " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << "ms\n";
@@ -256,10 +249,11 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
         generate_vectors<<<n_agents, {RESOLUTION_SHIFT, VECTOR_PACE_NUM}>>>(d_vectors, d_agents, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
 
-        check_vectors<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM>>>(d_obstacles, d_vectors, n_agents);
+        check_vectors<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM, n_agents * sizeof(vo)>>>(d_obstacles, d_vectors, n_agents);
         gpuErrchk(cudaDeviceSynchronize());
 
-        apply_best_velocities<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM>>>(d_agents, d_vectors, n_agents);
+        apply_best_velocities<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM, 
+            RESOLUTION_SHIFT * VECTOR_PACE_NUM * sizeof(std::pair<float, int>)>>>(d_agents, d_vectors, n_agents);
         gpuErrchk(cudaDeviceSynchronize());
         stop = std::chrono::steady_clock::now();
         cuda_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
@@ -282,6 +276,5 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     closeFiles();
     cudaFree(d_agents);
     cudaFree(d_obstacles);
-    cudaFree(d_best_intersects);
     cudaFree(d_vectors);
 }
