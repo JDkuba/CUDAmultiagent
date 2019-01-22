@@ -169,7 +169,7 @@ struct vo {
         apex.set(nanf("1"), nanf("1"));
     }
 
-    HD inline bool invalid() {
+    HD inline bool is_invalid() {
         return apex.is_invalid();
     }
 
@@ -189,6 +189,12 @@ struct vo {
     HD void print(int i, int j) {
         printf("id: (%d, %d), apex: (%.5f, %.5f), left: (%.5f, %.5f), right: (%.5f, %.5f)\n",
                i, j, apex.x(), apex.y(), left.x(), left.y(), right.x(), right.y());
+    }
+
+    HD void operator=(const vo& rhs) {
+        apex = rhs.apex;
+        left = rhs.left;
+        right = rhs.right;
     }
 };
 
