@@ -222,7 +222,6 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     agent *d_agents;
     vo *d_obstacles;
     vo *h_obstacles = new vo[n_agents * n_agents];      //to remove
-    unsigned long long *d_best_intersects;
     vec2* d_vectors;
 
     gpuErrchk(cudaMalloc(&d_agents, n_agents * sizeof(agent)));
@@ -283,6 +282,5 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     closeFiles();
     cudaFree(d_agents);
     cudaFree(d_obstacles);
-    cudaFree(d_best_intersects);
     cudaFree(d_vectors);
 }
