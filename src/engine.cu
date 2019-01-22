@@ -125,7 +125,7 @@ __global__ void check_vectors(vo *obstacles, vec2 *vectors, int n_agents) {
 
     vec2 vector = vectors[agent_idx * blockDim.x + vector_idx];
     
-    __shared__ vo shared_obs[1024];
+    extern __shared__ vo shared_obs[];
     
     if (vector_idx < n_agents) {
         shared_obs[vector_idx] = obstacles[agent_idx * n_agents + vector_idx];
@@ -249,7 +249,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
         generate_vectors<<<n_agents, {RESOLUTION_SHIFT, VECTOR_PACE_NUM}>>>(d_vectors, d_agents, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
 
-        check_vectors<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM>>>(d_obstacles, d_vectors, n_agents);
+        check_vectors<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM, n_agents * sizeof(vo)>>>(d_obstacles, d_vectors, n_agents);
         gpuErrchk(cudaDeviceSynchronize());
 
         apply_best_velocities<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM, 
