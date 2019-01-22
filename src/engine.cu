@@ -32,15 +32,12 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-constexpr float ALFA = static_cast<const float>(M_PI);
-constexpr int RANDOM_VECTORS_NUM = 150;
+constexpr float ALFA = static_cast<float>(M_PI);
 constexpr int VECTOR_PACE_NUM = 20;
 constexpr int RESOLUTION = 50;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
 constexpr int MAX_BOARDS = 10000;
 constexpr float COLLISION_RADIUS_MULT = 25;
-constexpr float ALFA_EPS = ALFA / RESOLUTION;
-constexpr int MULTIPLIER = 1000000000 / (10 * MAX_BOARDS);
 constexpr float APEX_SHIFT = 0.1;
 constexpr float CONTAINS_EPS = 0.01;
 
@@ -217,7 +214,6 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     putMetadataToFile(n_agents, n_generations, agent_radius, board_x, board_y);
     writeAgenstStartPosition(agents, n_agents);
 
-    int rays_number = (n_agents * n_agents * RESOLUTION_SHIFT);
     int pairs_number = n_agents * n_agents;
     agent *d_agents;
     vo *d_obstacles;
@@ -233,8 +229,6 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     int block_size = 1024;
     int grid_size_agents = n_agents / block_size + 1;
     int grid_size_pairs = pairs_number / block_size + 1;
-    int grid_size_rays = rays_number / block_size + 1;
-
 
     auto stop = std::chrono::steady_clock::now();
     std::cerr << "  Preparation time: " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << "ms\n";
