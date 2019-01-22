@@ -10,6 +10,7 @@
 #include <curand.h>
 #include <curand_kernel.h>
 #include <cuda.h>
+#include <chrono>
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 
@@ -194,6 +195,8 @@ void print_details(agent *agents, vo *obstacles, int n) {
 }
 
 void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, int move_divider, agent* agents) {
+    auto start = std::chrono::steady_clock::now();
+
     if (board_x > MAX_BOARDS || board_y > MAX_BOARDS)
         std::cout << "Exceeded MAX_BOARDS size. Bugs may occur\n";
 //    cudaSetDevice(2);
@@ -222,7 +225,14 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     int grid_size_pairs = pairs_number / block_size + 1;
     int grid_size_rays = rays_number / block_size + 1;
 
+
+    auto stop = std::chrono::steady_clock::now();
+    std::cerr << "  Preparation time: " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << "ms\n";
+
+    long long cuda_time = 0;
+    long long copying_time = 0;
     for (int i = 0; i < n_generations; ++i) {
+        start = std::chrono::steady_clock::now();
         clear_best_distances<<<grid_size_rays, block_size>>>(d_best_distances, rays_number);
         clear_obstacles <<<grid_size_pairs, block_size>>>(d_obstacles, n_agents);
         gpuErrchk(cudaDeviceSynchronize());
@@ -241,14 +251,22 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
 
         apply_best_velocities<<<n_agents, 1>>>(d_agents, d_best_distances, d_vectors, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
+        stop = std::chrono::steady_clock::now();
+        cuda_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
 
+        start = std::chrono::steady_clock::now();
         if (DEBUG_FLAG)
             print_details(agents, h_obstacles, n_agents);
 
         move<<<grid_size_pairs, block_size>>>(d_agents, n_agents, move_divider);
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
         writeAgentsPositions(agents, n_agents);
+        stop = std::chrono::steady_clock::now();
+        copying_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
     }
+
+    std::cerr << "  GPU total time: " << cuda_time << "ms\n";
+    std::cerr << "  Copying total time: " << copying_time << "ms\n";
 
     closeFiles();
     cudaFree(d_agents);

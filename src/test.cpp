@@ -44,7 +44,7 @@ int main(int argc, char const *argv[]) {
     cin >> n_generations >> agent_radius >> board_x >> board_y >> max_speed >> move_divider;
     n_agents = atoi(argv[2]);
 
-    printf("    GENERATING POSITIONS...\n");
+    printf("GENERATING POSITIONS...\n");
     fflush(stdout);
 
     auto *agents = new agent[n_agents];
@@ -59,7 +59,7 @@ int main(int argc, char const *argv[]) {
         simple_cross(agents, board_x, board_y);
     }
 
-    printf("    SIMULATING...\n");
+    printf("SIMULATING...\n");
     fflush(stdout);
 
     run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, move_divider, agents);
