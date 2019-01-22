@@ -36,7 +36,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 constexpr float ALFA = M_PI;
 constexpr int RANDOM_VECTORS_NUM = 150;
 constexpr int VECTOR_PACE_NUM = 20;
-constexpr int RESOLUTION = 40;
+constexpr int RESOLUTION = 50;
 constexpr int RESOLUTION_SHIFT = RESOLUTION + 1;
 constexpr int MAX_BOARDS = 10000;
 constexpr float COLLISION_RADIUS_MULT = 25;
@@ -124,19 +124,23 @@ __global__ void generate_vectors(vec2 *vectors, agent *agents, int n_agents, flo
 }
 
 __global__ void check_vectors(vo *obstacles, vec2 *vectors, int n_agents) {
-    int ix = blockDim.x * blockIdx.x + threadIdx.x;
-    int i1 = ix / n_agents;
-    int i2 = ix % n_agents;
+    int agent_idx = blockIdx.x;
+    int vector_idx = threadIdx.x;
 
-    if (ix >= n_agents * n_agents || i1 == i2 || obstacles[ix].invalid())
-        return;
+    vec2 vector = vectors[agent_idx * blockDim.x + vector_idx];
+    
+    __shared__ vo shared_obs[1024];
+    
+    if (vector_idx < n_agents) {
+        shared_obs[vector_idx] = obstacles[agent_idx * n_agents + vector_idx];
+    }
 
-    vo obs = obstacles[ix];
+    __syncthreads();
 
-    const int max = (i1 + 1) * VECTOR_PACE_NUM * RESOLUTION_SHIFT;
-    for (int i = i1*VECTOR_PACE_NUM * RESOLUTION_SHIFT; i < max; i++) {
-        if (obs.contains(vectors[i], CONTAINS_EPS)) {
-            vectors[i].set_invalid();
+    for (int i = 0; i < n_agents; i++) {
+        if (i != agent_idx && !shared_obs[i].is_invalid() && shared_obs[i].contains(vector, CONTAINS_EPS)) {
+            vectors[agent_idx * blockDim.x + vector_idx].set_invalid();
+            break;
         }
     }
 }
@@ -179,7 +183,7 @@ void print_details(agent *agents, vo *obstacles, int n) {
     bool ifprint = true;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            if (i != j && !obstacles[i * n + j].invalid()) {
+            if (i != j && !obstacles[i * n + j].is_invalid()) {
                 obstacles[i * n + j].print(i, j);
                 ifprint = true;
             }
@@ -238,7 +242,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
             generate_vectors<<<n_agents, {RESOLUTION_SHIFT, VECTOR_PACE_NUM}>>>(d_vectors, d_agents, n_agents, max_speed);
             gpuErrchk(cudaDeviceSynchronize());
 
-            check_vectors<<<grid_size_pairs, block_size>>>(d_obstacles, d_vectors, n_agents);
+            check_vectors<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM>>>(d_obstacles, d_vectors, n_agents);
             gpuErrchk(cudaDeviceSynchronize());
 
             apply_best_velocities<<<n_agents, 1>>>(d_agents, d_best_distances, d_vectors, n_agents, max_speed);
