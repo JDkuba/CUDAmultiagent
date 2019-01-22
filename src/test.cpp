@@ -51,6 +51,8 @@ int main(int argc, char const *argv[]) {
         circle(n_agents, agents, board_x, board_y);
     else if(strcmp(argv[1], "--cross") == 0)
         cross(n_agents, agents, board_x, board_y, agent_radius);
+    else if(strcmp(argv[1], "--lanes") == 0)
+        lanes(n_agents, agents, board_x, board_y, agent_radius);
     else if(strcmp(argv[1], "--simple_cross") == 0){
         n_agents = 2;
         simple_cross(agents, board_x, board_y);

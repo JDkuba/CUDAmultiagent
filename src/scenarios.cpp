@@ -67,6 +67,49 @@ void simple_cross(agent *agents, int board_x, int board_y) {
     agents[1].set_agent(99, board_y - 99, board_x - 99, 99);
 }
 
+void lanes(int n_agents, agent *agents, int board_x, int board_y, int agent_radius) {
+    vector<vec2> start_pos;
+    vector<vec2> dest_pos;
+    bool fit;
+    vec2 prop;
+    uniform_real_distribution<float> dist_x(-agent_radius * n_agents / 15.0f, agent_radius * n_agents / 15.0f);
+    uniform_real_distribution<float> dist_y(10 + agent_radius, board_y * 2.0f / 5.0f - 10 - agent_radius);
+    int i = n_agents;
+    while (i >= 0) {
+        float tmp_x = dist_x(gen);
+        float tmp_y = dist_y(gen);
+        fit = true;
+        if (i % 4 == 0) {
+            prop = vec2(board_x / 4.0f + tmp_x, tmp_y);
+        } else if (i % 4 == 1) {
+            prop = vec2(board_x / 4.0f + tmp_x, board_y - tmp_y);
+        } else if (i % 4 == 2) {
+            prop = vec2(board_x * 3.0f / 4.0f + tmp_x, tmp_y);
+        } else if (i % 4 == 3) {
+            prop = vec2(board_x * 3.0f / 4.0f + tmp_x, board_y - tmp_y);
+        }
+        for (const auto &p: start_pos) {
+            if (distance(p, prop) < 4.0f * agent_radius) {
+                ++i;
+                fit = false;
+                break;
+            }
+        }
+        if (fit) {
+            start_pos.push_back(prop);
+            if (i % 2 == 0) {
+                dest_pos.emplace_back(prop.x(), prop.y() + board_y * 3.0f / 5.0f);
+            } else {
+                dest_pos.emplace_back(prop.x(), prop.y() - board_y * 3.0f / 5.0f);
+            }
+        }
+        --i;
+    }
+    for (i = 0; i < n_agents; ++i) {
+        agents[i].set_agent(start_pos[i], dest_pos[i]);
+    }
+}
+
 void cross(int n_agents, agent *agents, int board_x, int board_y, int agent_radius) {
     vector<vec2> start_pos;
     vector<vec2> dest_pos;
