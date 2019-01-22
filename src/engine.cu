@@ -144,7 +144,7 @@ __global__ void check_vectors(vo *obstacles, vec2 *vectors, int n_agents) {
     }
 }
 
-__global__ void apply_best_velocities(agent *agents, int *best_distances, vec2* vectors, int n_agents, float max_speed){
+__global__ void apply_best_velocities(agent *agents, vec2* vectors, int n_agents){
     int agent_idx = blockIdx.x;
     int vector_idx = threadIdx.x;
     if (agent_idx >= n_agents || vector_idx >= RESOLUTION_SHIFT * VECTOR_PACE_NUM)
@@ -222,13 +222,11 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     agent *d_agents;
     vo *d_obstacles;
     vo *h_obstacles = new vo[n_agents * n_agents];      //to remove
-    int *d_best_distances;
     unsigned long long *d_best_intersects;
     vec2* d_vectors;
 
     gpuErrchk(cudaMalloc(&d_agents, n_agents * sizeof(agent)));
     gpuErrchk(cudaMalloc(&d_obstacles, n_agents * n_agents * sizeof(vo)));
-    gpuErrchk(cudaMalloc(&d_best_distances, rays_number * sizeof(int)));
     gpuErrchk(cudaMalloc(&d_vectors, n_agents * RESOLUTION_SHIFT * VECTOR_PACE_NUM * sizeof(vec2)));
 
     gpuErrchk(cudaMemcpy(d_agents, agents, n_agents * sizeof(agent), cudaMemcpyHostToDevice));
@@ -246,7 +244,6 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     long long copying_time = 0;
     for (int i = 0; i < n_generations; ++i) {
         start = std::chrono::steady_clock::now();
-        clear_best_distances<<<grid_size_rays, block_size>>>(d_best_distances, rays_number);
         clear_obstacles <<<grid_size_pairs, block_size>>>(d_obstacles, n_agents);
         gpuErrchk(cudaDeviceSynchronize());
 
@@ -262,7 +259,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
         check_vectors<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM>>>(d_obstacles, d_vectors, n_agents);
         gpuErrchk(cudaDeviceSynchronize());
 
-        apply_best_velocities<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM>>>(d_agents, d_best_distances, d_vectors, n_agents, max_speed);
+        apply_best_velocities<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM>>>(d_agents, d_vectors, n_agents);
         gpuErrchk(cudaDeviceSynchronize());
         stop = std::chrono::steady_clock::now();
         cuda_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
@@ -285,7 +282,6 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     closeFiles();
     cudaFree(d_agents);
     cudaFree(d_obstacles);
-    cudaFree(d_best_distances);
     cudaFree(d_best_intersects);
     cudaFree(d_vectors);
 }
