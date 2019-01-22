@@ -193,7 +193,7 @@ void print_details(agent *agents, vo *obstacles, int n) {
     }
 }
 
-void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, int move_divider, int fake_move_divider, agent* agents) {
+void run(int n_agents, int n_generations, float agent_radius, float max_speed, int board_x, int board_y, int move_divider, agent* agents) {
     if (board_x > MAX_BOARDS || board_y > MAX_BOARDS)
         std::cout << "Exceeded MAX_BOARDS size. Bugs may occur\n";
 //    cudaSetDevice(2);

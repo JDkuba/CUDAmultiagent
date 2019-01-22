@@ -40,8 +40,8 @@ int main(int argc, char const *argv[]) {
 
     int agent_radius;
     float max_speed;
-    int n_agents, n_generations, board_x, board_y, move_divider, fake_move_divider;
-    cin >> n_generations >> agent_radius >> board_x >> board_y >> max_speed >> move_divider >> fake_move_divider;
+    int n_agents, n_generations, board_x, board_y, move_divider;
+    cin >> n_generations >> agent_radius >> board_x >> board_y >> max_speed >> move_divider;
     n_agents = atoi(argv[2]);
 
     printf("    GENERATING POSITIONS...\n");
@@ -62,7 +62,7 @@ int main(int argc, char const *argv[]) {
     printf("    SIMULATING...\n");
     fflush(stdout);
 
-    run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, move_divider, fake_move_divider, agents);
+    run(n_agents, n_generations, agent_radius, max_speed, board_x, board_y, move_divider, agents);
     return 0;
 }
 
