@@ -29,10 +29,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-/*#define CURAND_CALL(x) do { if((x)!=CURAND_STATUS_SUCCESS) { \
-    printf("Error at %s:%d\n",__FILE__,__LINE__);\
-    return EXIT_FAILURE;}} while(0)*/
-
 constexpr float ALFA = M_PI;
 constexpr int RANDOM_VECTORS_NUM = 150;
 constexpr int VECTOR_PACE_NUM = 20;
@@ -262,4 +258,5 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
     cudaFree(d_obstacles);
     cudaFree(d_best_distances);
     cudaFree(d_best_intersects);
+    cudaFree(d_vectors);
 }
