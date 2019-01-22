@@ -145,7 +145,7 @@ __global__ void check_vectors(vo *obstacles, vec2 *vectors, int n_agents) {
 }
 
 __global__ void apply_best_velocities(agent *agents, int *best_distances, vec2* vectors, int n_agents, float max_speed){
-    int agent_idx = blockIdx.x;
+    int agent_idx = blockDim.x * blockIdx.x + threadIdx.x;
     if (agent_idx >= n_agents)
         return;
 
@@ -249,7 +249,7 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
         check_vectors<<<n_agents, RESOLUTION_SHIFT * VECTOR_PACE_NUM>>>(d_obstacles, d_vectors, n_agents);
         gpuErrchk(cudaDeviceSynchronize());
 
-        apply_best_velocities<<<n_agents, 1>>>(d_agents, d_best_distances, d_vectors, n_agents, max_speed);
+        apply_best_velocities<<<grid_size_agents, block_size>>>(d_agents, d_best_distances, d_vectors, n_agents, max_speed);
         gpuErrchk(cudaDeviceSynchronize());
         stop = std::chrono::steady_clock::now();
         cuda_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
@@ -258,9 +258,10 @@ void run(int n_agents, int n_generations, float agent_radius, float max_speed, i
         if (DEBUG_FLAG)
             print_details(agents, h_obstacles, n_agents);
 
-        move<<<grid_size_pairs, block_size>>>(d_agents, n_agents, move_divider);
+        move<<<grid_size_agents, block_size>>>(d_agents, n_agents, move_divider);
         gpuErrchk(cudaMemcpy(agents, d_agents, n_agents * sizeof(agent), cudaMemcpyDeviceToHost));
         writeAgentsPositions(agents, n_agents);
+
         stop = std::chrono::steady_clock::now();
         copying_time += std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
     }
